@@ -1,0 +1,259 @@
+---
+title: "ATAC-STARR Accessibility Peaks vs Buenrostro ATAC-seq Peaks"
+author: "Tyler Hansen"
+date: "4/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE)
+```
+
+```{r, Libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(ChIPseeker)
+library(clusterProfiler)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(org.Hs.eg.db)
+library(ReactomePA)
+library(extrafont)
+loadfonts(device = "win")
+library(egg)
+library(eulerr)
+library(data.table)
+library(ggrepel)
+library(png)
+```
+
+First make a venn diagram/euler plot showing peak overlap. Get numbers from doing a jaccard and wc -l. 
+```{r, Euler Plot, message=FALSE}
+#### View Region Overlap as a Venn Diagram ####
+#These numbers are from doing a bedtools jaccard on accre:
+# [hansetj1@gw344 genrich_ATAC-like_peaks]$ bedtools jaccard -a GM12878inGM12878_DNA_genrich_0.0001-qvalue.narrowPeak -b /data/hodges_lab/public_data/GM12878/obtained_as_raw_files/ATAC_GM12878_2013-buenrostro/data/genrich_peaks/GM12878_ATAC-seq_buenrostro_genrich_0.0001-qvalue.narrowPeak
+# intersection    union   jaccard n_intersections
+# 33425827        67388153        0.496019        51923
+# [hansetj1@gw344 genrich_ATAC-like_peaks]$ wc -l GM12878inGM12878_DNA_genrich_0.0001-qvalue.narrowPeak
+# 69563 GM12878inGM12878_DNA_genrich_0.0001-qvalue.narrowPeak
+# [hansetj1@gw344 genrich_ATAC-like_peaks]$ wc -l /data/hodges_lab/public_data/GM12878/obtained_as_raw_files/ATAC_GM12878_2013-buenrostro/data/genrich_peaks/GM12878_ATAC-seq_buenrostro_genrich_0.0001-qvalue.narrowPeak
+# 82337 /data/hodges_lab/public_data/GM12878/obtained_as_raw_files/ATAC_GM12878_2013-buenrostro/data/genrich_peaks/GM12878_ATAC-seq_buenrostro_genrich_0.0001-qvalue.narrowPeak
+
+#Make a vector of the values above:
+combo <- c(`Buenrostro et al. 2013\nATAC-seq Peaks` = 82337-51923, `ATAC-STARR\nAccessibility Peaks` = 69563-51923, "Buenrostro et al. 2013\nATAC-seq Peaks&ATAC-STARR\nAccessibility Peaks" = 51923)
+eul <- plot(euler(combo), quantities = TRUE) 
+
+eul
+
+#ggsave(eul, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/ATAC-STARR_vs_Buenrostro/euler-plot.pdf", device = cairo_pdf, width = 5, height = 3)
+```
+
+Next, look functionally by comparing HOMER motif enrichment anlaysis results.  
+```{r, Compare Motif Enrichment Results}
+#### Compare TF Motif Enrichment ####
+#Read in motif results txt files with this function. 
+format_motif_results <- function(df){
+  df <- mutate(df, percentTargetNum = (as.numeric(gsub("%", "", percentTarget, fixed = TRUE))/100))
+  df <- mutate(df, percentBackgroundNum = (as.numeric(gsub("%", "", percentBackground, fixed = TRUE))/100)) 
+  df <- mutate(df, percentFold = (percentTargetNum/percentBackgroundNum))
+  df <- mutate(df, Motif = gsub("\\(.*", "", MotifName))
+  df$Motif <- factor(df$Motif,levels=rev(unique(df$Motif)))
+  # Plot with GGPlot
+  return(df)
+}
+
+AS <- read_tsv("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/Motif_Analysis/GM12878inGM12878_DNA_genrich_0.0001-qvalue/knownResults.txt", col_names=c("MotifName","Consensus","p","logp","q","numTarget", "percentTarget","numBackground","percentBackground"), skip = 1)
+
+buen <- read_tsv("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/Motif_Analysis/GM12878_ATAC-seq_buenrostro_genrich_0.0001-qvalue/knownResults.txt", col_names=c("MotifName","Consensus","p","logp","q","numTarget", "percentTarget","numBackground","percentBackground"), skip = 1)
+
+AS <- format_motif_results(df=AS) 
+AS_text <- filter(AS, rank(logp) <= 15 | rank(dplyr::desc(percentFold)) >= 15)
+buen <- format_motif_results(df=buen) 
+buen_text <- filter(buen, rank((logp)) <= 15 | rank(dplyr::desc(percentFold)) <= 15)
+
+p_AS <- ggplot(AS, aes(x=abs(as.numeric(logp)), y=percentFold)) + 
+    geom_point(color="steelblue", size = 0.5) +
+    geom_text_repel(data=AS_text, aes(x=abs(as.numeric(logp)), y=percentFold, label = Motif), 
+               hjust = 0.5, nudge_y = 0.3, size = 2, fontface = "italic", 
+               max.overlaps = getOption("ggrepel.max.overlaps", default = 15)) + 
+    ggtitle("ATAC-STARR Peaks") +
+    labs(x = bquote("-"~log[10]~"(p-value)"), y = "fold-change enrichment") +
+    theme_bw(base_size = 8, base_family = "Arial") +
+    theme(plot.title = element_text(hjust = 0.5, size = 8, face = "bold"))
+
+p_buen <- ggplot(buen, aes(x=abs(as.numeric(logp)), y=percentFold)) + 
+    geom_point(color="forestgreen", size = 0.5) +
+    geom_text_repel(data=buen_text, aes(x=abs(as.numeric(logp)), y=percentFold, label = Motif), 
+               hjust = 0.5, nudge_y = 0.3, size = 2, fontface = "italic", 
+               max.overlaps = getOption("ggrepel.max.overlaps", default = 15)) + 
+    ggtitle("Buenrostro Peaks") +
+    labs(x = bquote("-"~log[10]~"(p-value)"), y = "fold-change enrichment") +
+    theme_bw(base_size = 8, base_family = "Arial") +
+    theme(plot.title = element_text(hjust = 0.5, size =8, face = "bold"))
+
+p <- ggarrange(p_AS, p_buen, nrow = 2)
+
+p 
+
+#ggsave("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/ATAC-STARR_vs_Buenrostro/Motif-Results.pdf", p, device = cairo_pdf, width = 2.5, height = 4)
+```
+
+```{r, Compare Annotation}
+#### Annotate Peaks ####
+setwd("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/accessibility/genrich_ATAC-like_peaks/")
+GM12878_OCRs <- annotatePeak("GM12878inGM12878_DNA_genrich_0.0001-qvalue.narrowPeak", tssRegion = c(-2000, 1000), TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", flankDistance = 5000)
+
+setwd("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/GM12878_ATAC-seq_Buenrostro/data/genrich_peaks/")
+buenrostro_OCRs <- annotatePeak("GM12878_ATAC-seq_buenrostro_genrich_0.0001-qvalue.narrowPeak", tssRegion = c(-2000, 1000), TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", flankDistance = 5000)
+
+#### Compare Peak Feature Annotation ####
+bar <- plotAnnoBar(list(`Buenrostro`=buenrostro_OCRs, `ATAC-STARR`=GM12878_OCRs))
+bar <- bar + theme_bw(base_family = "Arial", base_size = 8) + 
+  labs(color="", fill="") +
+  theme(plot.title = element_blank(), 
+        legend.position = "bottom", 
+        legend.key.height = unit(0.12, "inches"), 
+        legend.key.width = unit(0.12, "inches")) 
+bar 
+
+ggsave(bar, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/ATAC-STARR_vs_Buenrostro/annotation-distribution.pdf", device = cairo_pdf, width = 4, height = 2)
+```
+This needs work. 
+```{r, Copmpare Pathway Enrichments}
+compare_pathway_enrichments <- function(compare_list, background_file = NULL,showCategory = 8) {
+  reactome <- compareCluster(geneCluster = compare_list,
+                             fun = "enrichPathway",
+                             pAdjustMethod = "BH")
+  KEGG <- compareCluster(geneCluster = compare_list,
+                         fun = "enrichKEGG",
+                         organism = "hsa",
+                         pAdjustMethod = "BH")
+  if (is.null(background_file) == FALSE) {
+    #read in the background file as a dataframe and rename the first three col_names.
+    background <- read_tsv(background_file, col_names = FALSE) %>% as.data.frame()
+    colnames(background)[1:3] <- c("Chr", "Start", "End")
+    #With the df, convert to a GRanges object and extract nearest neighbor gene with seq2gene and the same parameters as annotatePeak.  
+    background <- makeGRangesFromDataFrame(background)
+    background_gene <- seq2gene(background, tssRegion = c(-2000, 1000), TxDb = txdb, flankDistance = 5000)
+    GO <- compareCluster(geneCluster = compare_list,
+                         fun = "enrichGO",
+                         OrgDb = org.Hs.eg.db,
+                         keyType = "ENTREZID",
+                         ont = "BP",
+                         pAdjustMethod = "BH",
+                         universe = background_gene)
+  } else if (is.null(background_file) == TRUE) {
+    GO <- compareCluster(geneCluster = compare_list,
+                         fun = "enrichGO",
+                         OrgDb = org.Hs.eg.db,
+                         keyType = "ENTREZID",
+                         ont = "BP",
+                         pAdjustMethod = "BH")  
+  }
+  reactome_plot <- dotplot(reactome, showCategory = showCategory, font.size = 6)
+  KEGG_plot <- dotplot(KEGG, showCategory = showCategory, font.size = 6)
+  GO_plot <- dotplot(GO, showCategory = showCategory, font.size = 6)
+  list <- list(reactome_plot=reactome_plot, KEGG_plot=KEGG_plot, GO_plot=GO_plot, reactome=reactome, KEGG=KEGG, GO=GO)
+  return(list)
+}
+
+#### Compare Pathway enrichment ####
+list <- list(`Buenrostro et al. 2013\nATAC-seq Peaks`=as.vector(as.data.frame(buenrostro_OCRs)$geneId), `ATAC-STARR\nAccessibility Peaks`=as.vector(as.data.frame(GM12878_OCRs)$geneId))
+pathway <- compare_pathway_enrichments(list, showCategory = 5)
+
+#Show all dotplots in one figure using ggarrange from the egg package. 
+p1 <- pathway$reactome_plot +
+  labs(color = "Adjusted\np-value", size = "GeneRatio") +
+  scale_color_distiller(palette = "Blues", direction = -1) +
+  ggtitle("Genrich Open Chromatin Peaks - Pathway Enrichment", subtitle = "Reactome Database") +
+  theme_bw(base_family = "Arial") +
+  scale_radius(range = c(1, 4)) +
+  theme(plot.title = element_text(hjust=0.5, size=6, face="bold")) +
+  theme(plot.subtitle = element_text(hjust=0.5, size=6, face="italic")) +
+  theme(axis.text.y=element_text(size=6)) +
+  theme(axis.text.x=element_text(size=6)) + 
+  theme(legend.text=element_text(size=6)) + 
+  theme(legend.title=element_text(size=6),
+        legend.key.height = unit(0.12, "inches"), 
+        legend.key.width = unit(0.12, "inches"))
+
+ggsave(p1, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/ATAC-STARR_vs_Buenrostro/reactome-dotplot.pdf", device = cairo_pdf, width = 5, height = 2.75)
+
+```
+
+```{r, Peak size distribution}
+AS <- read_tsv('C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/accessibility/genrich_ATAC-like_peaks/GM12878inGM12878_DNA_genrich_0.0001-qvalue.narrowPeak', col_names = FALSE) %>% mutate(size=X3-X2, Sample="ATAC-STARR Accessibility")
+
+Buen <- read_tsv('C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/GM12878_ATAC-seq_Buenrostro/data/genrich_peaks/GM12878_ATAC-seq_buenrostro_genrich_0.0001-qvalue.narrowPeak', col_names = FALSE) %>% mutate(size=X3-X2, Sample="Buenrostro")
+
+df <- bind_rows(AS, Buen)
+
+size <- ggplot(df, aes(x=size)) + 
+  geom_histogram(binwidth = 2, aes(color = Sample)) +
+  facet_grid(.~Sample) +
+  xlab("Peak Size (bp)") +
+  ylab("Count") +
+  ggtitle("Genrich Open Chromatin Peaks - Size Distribution") +
+  scale_color_manual(values = c("steelblue", "forestgreen")) +
+  theme_bw(base_family = "Arial", base_size = 6) +
+  theme(plot.title = element_text(hjust=0.5, face="bold"), legend.position = "none") +
+  coord_cartesian(xlim = c(0,1500))
+
+ggsave(size, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/ATAC-STARR_vs_Buenrostro/peak-size-distribution.pdf", device = cairo_pdf, width =3, height = 2)
+```
+```{r, Compare FRiP scores}
+#Using the FRIP scores results, make a dataframe for ggploting
+
+results <- data.frame(frip = c(63311006,26736172), total = c(90504726,129433258), sample = c("ATAC-STARR", "Buenrostro")) %>% mutate(frip_perc = frip/total)
+
+frip <- ggplot(results, aes(x=sample, y=frip_perc)) +
+  geom_col(aes(fill=sample), color = "black") +
+  scale_fill_manual(values = c("steelblue", "forestgreen")) +
+  coord_cartesian(ylim=c(0,1)) +
+  ylab("Fraction of PE fragments in Peaks") +
+  theme_bw(base_size = 6, base_family = "Arial") +
+  theme(legend.position = "none",  
+        axis.title.x = element_blank(), axis.text = element_text(angle = 90))
+
+ggsave(frip, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/ATAC-STARR_vs_Buenrostro/frip-scores.pdf", device = cairo_pdf, width = 1.25, height = 2)
+```
+
+```{r, Plot Correlation}
+#I made correlation plots with deeptools, but they don't look that great. I'll take the raw counts from that and make a ggplot here. 
+
+#read in results.
+tsv <- read_tsv(file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/reproducibility/ATAC-STARR+Buenrostro_reproducibility_merged-bams.tsv", col_names = c("Chr", "Start", "End", "ATAC-STARR", "Buenrostro"), skip = 1)
+
+#calculate scaling factors:
+AS_scale <- sum(tsv$`ATAC-STARR`) / 1e6
+buen_scale <- sum(tsv$Buenrostro) / 1e6
+
+#scale read counts by million counts. (cpm)
+tsv <- mutate(tsv, AS_cpm = `ATAC-STARR` / AS_scale) %>% mutate(buen_cpm = Buenrostro / buen_scale)
+
+#double check scaling, the sum of each cpm column should be 1e6:
+sum(tsv$AS_cpm) == 1e6
+sum(tsv$buen_cpm) == 1e6
+
+#log10 convert
+tsv <- mutate(tsv, AS_log = log10(1 + AS_cpm)) %>% mutate(buen_log = log10(1 + buen_cpm))
+
+#plot scatter:
+p <- ggplot(tsv, aes(x=AS_log, y=buen_log)) +
+  geom_bin2d(bins=150) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = bquote(~log[10]~"(1 + ATAC-STARR)"), y=bquote("-"~log[10]~"(1 + Buenrostro)")) +
+  scale_fill_viridis_c() +
+  scale_y_continuous(breaks = seq(0, 2.5, 0.5)) +
+  scale_x_continuous(breaks = seq(0, 2.5, 0.5)) +
+  theme_bw(base_size = 8, base_family = "Arial") +
+  theme(legend.position = "none") +
+  coord_cartesian(xlim = c(0,2.5), ylim = c(0,2.5))
+
+#Save plot
+ggsave(p, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/ATAC-STARR_vs_Buenrostro/correlation_scatter.pdf", device = cairo_pdf, width = 3, height = 3)
+
+#calculate correlation
+cor.test(tsv$AS_cpm, tsv$buen_cpm, method = "spearman")
+cor.test(tsv$AS_cpm, tsv$buen_cpm, method = "pearson")
+```
+
+

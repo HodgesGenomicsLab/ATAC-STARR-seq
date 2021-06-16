@@ -1,0 +1,52 @@
+#!/bin/bash
+#SBATCH --mail-user=tyler.j.hansen@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=12:00:00
+#SBATCH --mem=16G
+#SBATCH --output=create_counts-matrix-%j.out
+##################
+#Tyler Hansen 1.8.21
+#This is a slurm script to create a counts matrix using fragment groups and ATAC-STARR mapped read files. 
+#The outputs will be used for analysis with DEseq2.  
+#Input files are the fragment groups file, in GFF format, and all bam files (pos-sorted) that you want to assign to these regions. 
+#Output is a tsv with columns representing bams and rows representing regions.
+#featureCount option descriptions:
+#  a is the annotation file (the hg38 GTF) and F is the format
+#  O is allow multioverlap, T is number of threads. 
+#  p specifies paired-end data. B requires both ends mapped for paired end data
+#  t references the feature type. g references the attribute
+##################
+
+#Define path variables.
+BAMS='/data/hodges_lab/ATAC-STARR_V2/data/bams/pos-sorted'
+GFFS='/data/hodges_lab/ATAC-STARR_V2/data/fragment_groups'
+OUTPUT_DIR='/data/hodges_lab/ATAC-STARR_V2/data/ATAC-STARR_cts_matricies'
+
+#Human genome samples: GG and GL
+GENOME_FA='/data/hodges_lab/hg38_genome/hg38.fa'
+for i in GM12878inLCL8664 #GM12878inGM12878
+do
+    featureCounts -p -B -O --minOverlap 1 -T 8 -F GTF -t accessible_region -g Peak_ID -G $GENOME_FA \
+        -a ${GFFS}/${i}_fragment-groups.gff  \
+        -o ${OUTPUT_DIR}/${i}_counts.tsv \
+        ${BAMS}/${i}_DNA_Rep1.filtered.pos-sorted.bam \
+        ${BAMS}/${i}_DNA_Rep2.filtered.pos-sorted.bam \
+        ${BAMS}/${i}_RNA_Rep1.filtered.pos-sorted.bam \
+        ${BAMS}/${i}_RNA_Rep2.filtered.pos-sorted.bam
+done
+
+#Rhesus genome samples: LG and LL
+GENOME_FA='/data/hodges_lab/rheMac10_genome/rheMac10.fa'
+for i in LCL8664inGM12878 LCL8664inLCL8664
+do
+    featureCounts -p -B -O --minOverlap 1 -T 8 -F GTF -t accessible_region -g Peak_ID -G $GENOME_FA \
+        -a ${GFFS}/${i}_fragment-groups.gff  \
+        -o ${OUTPUT_DIR}/${i}_counts.tsv \
+        ${BAMS}/${i}_DNA_Rep1.filtered.pos-sorted.bam \
+        ${BAMS}/${i}_DNA_Rep2.filtered.pos-sorted.bam \
+        ${BAMS}/${i}_RNA_Rep1.filtered.pos-sorted.bam \
+        ${BAMS}/${i}_RNA_Rep2.filtered.pos-sorted.bam
+done

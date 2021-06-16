@@ -1,0 +1,46 @@
+#!/bin/bash
+#SBATCH --mail-user=tyler.j.hansen@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=12:00:00
+#SBATCH --mem=16G
+#SBATCH --output=bam_reproducibility-%j.out
+##################
+#Tyler Hansen 4.22.2021
+#This is a slurm script to determine reproduciblity via correlation plots using deeptools and bam files as input. 
+##################
+
+#Software
+source activate deep_tools_v1
+module restore anaconda
+
+#Define path variables.
+BAM_DIR='/data/hodges_lab/ATAC-STARR_V2/data/bams/pos-sorted'
+RESULTS_DIR='/data/hodges_lab/ATAC-STARR_V2/results/reproducibility'
+BED_FILE='/data/hodges_lab/ATAC-STARR_V2/data/accessibility/genrich_ATAC-like_peaks/GM12878inGM12878_DNA_genrich_5-log10qvalue.narrowPeak'
+
+#Try both bins and OCRs as a bed file. 
+multiBamSummary bins --bamfiles ${BAM_DIR}/GM12878inGM12878_DNA_Rep1.filtered.pos-sorted.bam ${BAM_DIR}/GM12878inGM12878_DNA_Rep2.filtered.pos-sorted.bam \
+    ${BAM_DIR}/GM12878inGM12878_RNA_Rep1.filtered.pos-sorted.bam ${BAM_DIR}/GM12878inGM12878_RNA_Rep2.filtered.pos-sorted.bam \
+    -o ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_bins.npz -l DNA1 DNA2 RNA1 RNA2 -bs 1000 -p 8 -e --centerReads
+
+multiBamSummary BED-file --BED $BED_FILE --bamfiles ${BAM_DIR}/GM12878inGM12878_DNA_Rep1.filtered.pos-sorted.bam ${BAM_DIR}/GM12878inGM12878_DNA_Rep2.filtered.pos-sorted.bam \
+    ${BAM_DIR}/GM12878inGM12878_RNA_Rep1.filtered.pos-sorted.bam ${BAM_DIR}/GM12878inGM12878_RNA_Rep2.filtered.pos-sorted.bam \
+    -o ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_peaks.npz -l DNA1 DNA2 RNA1 RNA2 -bs 1000 -p 8 -e --centerReads
+
+#plotPCA
+plotPCA -in ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_bins.npz -o ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_bins_PCA.pdf 
+plotPCA -in ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_peaks.npz -o ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_peaks_peaks_PCA.pdf 
+
+#Plot Correlation
+plotCorrelation -in ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_bins.npz -c pearson --skipZeros -p scatterplot \
+    -o ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_bins_scatterplot_pearson.pdf 
+plotCorrelation -in ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_bins.npz -c spearman --skipZeros -p scatterplot \
+    -o ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_bins_scatterplot_spearman.pdf 
+
+plotCorrelation -in ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_peaks.npz -c pearson --skipZeros -p scatterplot \
+    -o ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_peaks_scatterplot_pearson.pdf 
+plotCorrelation -in ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_peaks.npz -c spearman --skipZeros -p scatterplot \
+    -o ${RESULTS_DIR}/GM12878inGM12878_bam_reproducibility_peaks_scatterplot_spearman.pdf 

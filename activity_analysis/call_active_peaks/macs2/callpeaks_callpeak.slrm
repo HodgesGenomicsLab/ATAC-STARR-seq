@@ -1,0 +1,29 @@
+#!/bin/bash
+#SBATCH --mail-user=tyler.j.hansen@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=08:00:00
+#SBATCH --mem=16G
+############################
+# Tyler Hansen 12-08-2020 
+# This script is part of the "option_1" series of scripts. See readme.txt in the option_1 directory for more information.  
+# This script uses MACS2 callpeaks to call peaks from ATAC-STARR data. 
+# Note: Hg38 and rheMac10 are roughly the same effective genome size at 3.0e9. 
+############################
+
+#Variables
+INPUT='/data/hodges_lab/ATAC-STARR_V2/data/bams/merged_bams'
+OUT_DIR='/data/hodges_lab/ATAC-STARR_V2/data/macs2_peaks/callpeak'
+
+#Software
+module restore MACS
+
+#Loop through experiments
+for EXPT in GM12878inGM12878 LCL8664inLCL8664
+do 
+    macs2 callpeak -t ${INPUT}/${EXPT}_RNA_merged.unique.pos-sorted.bam -c ${INPUT}/${EXPT}_DNA_merged.unique.pos-sorted.bam \
+    -f BAM -g 3.0e9 --keep-dup "all" --scale-to "small" --bdg --qvalue 0.05 --outdir $OUT_DIR -n ${EXPT}_callpeak.unique \
+    --broad --broad-cutoff 0.1
+done

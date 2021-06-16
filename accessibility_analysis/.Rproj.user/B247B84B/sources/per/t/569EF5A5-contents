@@ -1,0 +1,165 @@
+---
+title: "ATAC-seq_motif-analysis"
+author: "Tyler Hansen"
+date: "December 22, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, load libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(data.table)
+library(extrafont)
+loadfonts(device = "win", quiet = TRUE)
+```
+
+```{r, function, warning=FALSE, message=FALSE}
+#Tim's function
+motifDotplot <- function(listOfTables, show, qThreshold, title){
+  # Create a main database table with IDs and percent fold change column
+  mainReferenceDBtemp <- rbindlist(listOfTables, idcol="ID")
+  # Change to factor to maintain order in plotting
+  mainReferenceDBtemp$ID <- factor(mainReferenceDBtemp$ID, levels = unique(mainReferenceDBtemp$ID))
+  # convert percentages and calculate fold change
+  mainReferenceDB <- mainReferenceDBtemp %>%
+    mutate(percentTargetNum = (as.numeric(gsub("%", "", percentTarget, fixed = TRUE))/100)) %>%
+    mutate(percentBackgroundNum = (as.numeric(gsub("%", "", percentBackground, fixed = TRUE))/100)) %>%
+    mutate(percentFold = (percentTargetNum/percentBackgroundNum))
+  # Convert the TF names to somthing more manageable
+  mainReferenceDB <- mainReferenceDB %>%
+    mutate(Motif = gsub("\\(.*", "", MotifName))
+  # ^ Now have: master table with IDs and needed values
+  
+  # Next: Find out which rows to pull for graphing: 
+  # Take first X amount of lines from tables
+  loShortTables <- lapply(listOfTables, '[', c(1:show),)
+  # Find the list of Motifs to extract
+  shortTableDF <- rbindlist(loShortTables)
+  voMotifsToExtract <- unique(shortTableDF$Consensus)
+  # Use the main database table to pulloutrows
+  tableToPlotAll <- mainReferenceDB[mainReferenceDB$Consensus %in% voMotifsToExtract,]
+  tableToPlot <- tableToPlotAll[tableToPlotAll$q <= qThreshold,]
+  # This command reorders Y-axis motifs nicely
+  tableToPlot$Motif <- factor(tableToPlot$Motif,levels=rev(unique(tableToPlot$Motif)))
+  # Find the maximum P value to scale the color with
+  maxPValue <- max(abs(as.numeric(tableToPlot$logp)))
+  medianPValue <- median(abs(as.numeric(tableToPlot$logp)))
+  minPValue <- min(abs(as.numeric(tableToPlot$logp)))
+  tableToPlot$max <- maxPValue
+  tableToPlot$median <- medianPValue
+  ttp<<-tableToPlot
+  # Plot with GGPlot
+  dotplotMotifs <- ggplot(tableToPlot, aes(x=ID, y=Motif)) + 
+    geom_point(aes(size = percentFold, color = abs(as.numeric(logp)))) + 
+    scale_colour_gradient(limits=c(minPValue, maxPValue), low="blue", high="red") +
+    ggtitle(title) +
+    xlab("") +
+    labs(color = "|log10(p-val)|", size = "Percent Fold Change:\n(% target / % background)") +
+    theme_bw(base_size = 14, base_family = "Arial")
+  dotplotMotifs
+}
+```
+```{r, Sample OCRs, message=FALSE, warning=FALSE}
+#Read in motif results txt files
+setwd("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/ATAC_from_AS-DNA_analysis/")
+
+GM12878_MA <- read_tsv("GM12878inGM12878_DNA_genrich_0.005-qvalue.narrowPeak_noBG/knownResults.txt", col_names=c("MotifName","Consensus","p","logp","q","numTarget", "percentTarget","numBackground","percentBackground"))
+
+LCL8664_MA <- read_tsv("LCL8664inLCL8664_DNA_genrich_hg38-from-rheMac10_0.005-qvalue.narrowPeak_noBG/knownResults.txt", col_names=c("MotifName","Consensus","p","logp","q","numTarget", "percentTarget","numBackground","percentBackground"))
+
+#User needs to make a list of their output motif tables here:
+OCR_list <- list(`GM12878` = GM12878_MA, `LCL8664` = LCL8664_MA)
+
+#Plot
+p <- motifDotplot(listOfTables = OCR_list, show = 20, qThreshold=0.05, title="Genrich Open Chromatin Peaks - Motif Enrichment")
+p
+
+#Save as PNG
+ggsave(plot = p, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/ATAC_from_AS-DNA_analysis/MotifAnalysis_dotplot.png", device = "png", height = 6, width = 6)
+
+#Save as EPS
+setEPS()
+postscript("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/ATAC_from_AS-DNA_analysis/MotifAnalysis_dotplot.eps", height = 6, width = 6, family = "Arial")
+p
+dev.off()
+```
+
+```{r, Differential OCRs, message=FALSE, warning=FALSE}
+#Read in motif results txt files
+setwd("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/Motif_Analysis/")
+
+shared <- read_tsv("shared_OCRs/knownResults.txt", col_names=c("MotifName","Consensus","p","logp","q","numTarget", "percentTarget","numBackground","percentBackground"))
+
+GM_specific <- read_tsv("GM12878-specific_OCRs/knownResults.txt", col_names=c("MotifName","Consensus","p","logp","q","numTarget", "percentTarget","numBackground","percentBackground"))
+
+LCL_specific <- read_tsv("LCL8664-specific_OCRs/knownResults.txt", col_names=c("MotifName","Consensus","p","logp","q","numTarget", "percentTarget","numBackground","percentBackground"))
+
+#User needs to make a list of their output motif tables here:
+diff_list <- list(`Shared` = shared, `GM12878-specific` = GM_specific, `LCL8664-specific` = LCL_specific)
+
+#Plot
+q <- motifDotplot(listOfTables = diff_list, show = 20, qThreshold=0.05, title="Differential Open Chromatin Peaks - Motif Enrichment")
+q
+
+#Save as PNG
+ggsave(plot = q, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/ATAC_from_AS-DNA_analysis/MotifAnalysis_dotplot_diff.png", device = "png", height = 6, width = 7)
+
+#Save as EPS
+setEPS()
+postscript("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/ATAC_from_AS-DNA_analysis/MotifAnalysis_dotplot_diff.eps", height = 6, width = 7, family = "Arial")
+q
+dev.off()
+```
+
+```{r, More Stringent Differential OCRs no background, message=FALSE, warning=FALSE}
+#Read in motif results txt files
+setwd("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/Motif_Analysis/")
+
+GM_specific_5 <- read_tsv("GM12878-specific_OCRs_L2FC-5_noBG/knownResults.txt", col_names=c("MotifName","Consensus","p","logp","q","numTarget", "percentTarget","numBackground","percentBackground"))
+
+LCL_specific_5 <- read_tsv("LCL8664-specific_OCRs_L2FC-5_noBG/knownResults.txt", col_names=c("MotifName","Consensus","p","logp","q","numTarget", "percentTarget","numBackground","percentBackground"))
+
+#User needs to make a list of their output motif tables here:
+str_diff_list <- list(`GM12878-specific` = GM_specific_5, `LCL8664-specific` = LCL_specific_5)
+
+#Plot
+pq <- motifDotplot(listOfTables = str_diff_list, show = 20, qThreshold=0.05, title="More Stringent Differential Open Chromatin Peaks - Motif Enrichment - no Background")
+pq
+
+#Save as PNG
+ggsave(plot = pq, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/ATAC_from_AS-DNA_analysis/MotifAnalysis_dotplot_stringent_diff_noBG.png", device = "png", height = 6, width = 7)
+
+#Save as EPS
+setEPS()
+postscript("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/ATAC_from_AS-DNA_analysis/MotifAnalysis_dotplot_stringent_diff_noBG.eps", height = 6, width = 7, family = "Arial")
+pq
+dev.off()
+```
+
+```{r, More Stringent Differential OCRs with background, message=FALSE, warning=FALSE}
+#Read in motif results txt files
+setwd("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/Motif_Analysis/")
+
+GM_specific_5_BG <- read_tsv("GM12878-specific_OCRs_L2FC-5_withBG/knownResults.txt", col_names=c("MotifName","Consensus","p","logp","q","numTarget", "percentTarget","numBackground","percentBackground"))
+
+LCL_specific_5_BG <- read_tsv("LCL8664-specific_OCRs_L2FC-5_withBG/knownResults.txt", col_names=c("MotifName","Consensus","p","logp","q","numTarget", "percentTarget","numBackground","percentBackground"))
+
+#User needs to make a list of their output motif tables here:
+str_diff_BG_list <- list(`GM12878-specific` = GM_specific_5_BG, `LCL8664-specific` = LCL_specific_5_BG)
+
+#Plot
+qp <- motifDotplot(listOfTables = str_diff_BG_list, show = 20, qThreshold=0.05, title="More Stringent Differential Open Chromatin Peaks\nMotif Enrichment - with Background")
+qp
+
+#Save as PNG
+ggsave(plot = qp, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/ATAC_from_AS-DNA_analysis/MotifAnalysis_dotplot_stringent_diff_withBG.png", device = "png", height = 6, width = 7)
+
+#Save as EPS
+setEPS()
+postscript("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/ATAC_from_AS-DNA_analysis/MotifAnalysis_dotplot_stringent_diff_withBG.eps", height = 6, width = 7, family = "Arial")
+qp
+dev.off()
+```

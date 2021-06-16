@@ -1,0 +1,79 @@
+---
+title: "NAR Paper - Supp 3"
+author: "Tyler Hansen"
+date: "5/19/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(extrafont)
+loadfonts(device = "win")
+library(ggforce)
+```
+
+```{r}
+df <- data.frame(
+  method = factor(x = c("MACS2\n(FDR < 0.1)", "MACS2\n(FDR < 0.0001)", "CRADLE\n(FDR < 0.25)", "Fragment Groups\n(FDR < 0.1)", "Sliding Windows\n(FDR < 0.1)"), levels = c("MACS2\n(FDR < 0.1)", "MACS2\n(FDR < 0.0001)", "CRADLE\n(FDR < 0.25)", "Fragment Groups\n(FDR < 0.1)", "Sliding Windows\n(FDR < 0.1)")),
+  regions = c(322098, 217552, 9769, 10203, 14617)
+)
+
+p <- ggplot(df, aes(x=method, y=regions)) + 
+  geom_col(aes(fill=method)) +
+  geom_text(aes(label=regions), position=position_dodge(width=0.9), vjust=-0.25, size = 2) +
+  scale_fill_brewer(palette = "Purples") +
+  theme_light(base_size = 6, base_family = "Arial") +
+  theme(legend.position = "none", axis.title.x = element_blank(), axis.text.x = element_text(hjust = 0.5)) +
+  facet_zoom(ylim = c(0, 17500)) +
+  ylab("# Active Regions Called")
+
+ggsave(plot = p, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/Supp_3/region_count.pdf", device = cairo_pdf, width = 6.5, height = 2)
+```
+
+```{r}
+DNA_results <- data.frame(frip = c(5531253, 7661740, 10456511), total = c(114606865, 114606865, 114606865), method = factor(x = c("CRADLE", "Fragment\nGroups", "Sliding\nWindows"), levels = c("CRADLE", "Fragment\nGroups", "Sliding\nWindows"))) %>% mutate(frip_perc = round(frip/total, digits = 3), Type = "DNA")
+
+RNA_results <- data.frame(frip = c(14452880, 24355554, 32086849), total = c(248398295, 248398295, 248398295), method = factor(x = c("CRADLE", "Fragment\nGroups", "Sliding\nWindows"), levels = c("CRADLE", "Fragment\nGroups", "Sliding\nWindows"))) %>% mutate(frip_perc = round(frip/total, digits = 3), Type = "RNA")
+
+results <- bind_rows(DNA_results, RNA_results)
+
+frip <- ggplot(results, aes(x=method, y=frip_perc)) +
+  geom_col(aes(fill=method)) +
+  geom_text(aes(label=frip_perc), position=position_dodge(width=0.9), vjust=-0.25, size = 2) +
+  scale_fill_brewer(palette = "Greens") +
+  coord_cartesian(ylim=c(0,1)) +
+  ylab("Fraction of PE fragments in Peaks") +
+  facet_grid(.~Type) +
+  theme_bw(base_size = 6, base_family = "Arial") +
+  theme(legend.position = "none",  
+        axis.title.x = element_blank(), axis.text = element_text()) +
+  coord_cartesian(ylim = c(0,0.2))
+
+ggsave(frip, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/Supp_3/frip-scores.pdf", device = cairo_pdf, width = 6.5, height = 2)
+```
+
+```{r}
+df <- data.frame(
+  duplicates = factor(x = c("included", "removed", "included", "removed"), levels = c("included", "removed")),
+  Region = factor(x = c("active", "active", "silent", "silent"), levels = c("active", "silent")),
+  count = c(14617, 3855, 19393, 11757)
+)
+
+p <- ggplot(df, aes(x=duplicates, y=count)) + 
+  geom_col(aes(fill=Region), position = "dodge2") +
+  geom_text(aes(label=count), position=position_dodge2(width=0.9), vjust=-0.25, size = 2) +
+  scale_fill_manual(values = c("Steelblue", "Firebrick")) +
+  theme_bw(base_size = 6, base_family = "Arial") +
+  theme(legend.position = c(0.75,0.9), axis.title.x = element_blank(), axis.text.x = element_text(hjust = 0.5), legend.key.size = unit(0.1, units = "in"), legend.background = element_rect(fill="white", color = "black")) +
+  ylab("# regions Called")
+
+ggsave(plot = p, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/Supp_3/plus-minus-duplicates_regions-counts.pdf", device = cairo_pdf, width = 1.5, height = 3)
+```
+
+

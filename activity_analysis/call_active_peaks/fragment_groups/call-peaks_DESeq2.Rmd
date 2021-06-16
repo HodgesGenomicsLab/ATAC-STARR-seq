@@ -1,0 +1,308 @@
+---
+title: "Calling Active and Silent Regulatory Elements from ATAC-STARR Data"
+author: "Tyler Hansen"
+date: "January 26, 2021"
+output: html_document
+---
+
+This is an r markdown script that details the analysis and results of the ATAC-STARR V2 dataset. Briefly, active regions are called using DESeq2 which performs differential analysis on the counts matrix that is fed in. The active must have a padj (Benjamin-Hochberg corrected p-value) < 0.1 and a Log2(RNA/DNA "foldchange") > 0. I also extract silent regions, padj < 0.1, L2FC < 0. I then isolate these regions, add positional information using the gff file, and write as a tsv for downstream analysis. 
+
+In addition, I use the dds object to give me a normalized counts matrix, which I use to calculate reproducibility and correlation for the replicates.
+
+Note: This was performed on the machine in the Hodges Lab and therefore has a slightly different path to the working directory than on my PC. I was not able to knit due to memory limits. 
+
+R version 3.6.1 | 32GB RAM
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, Load Libraries, message=FALSE, warning=FALSE}
+#Load required libraries
+library(DESeq2)
+library(tidyverse)
+library(hexbin)
+library(extrafont)
+loadfonts(device = "win")
+library(apeglm)
+```
+
+```{r, Functions, message=FALSE}
+read_counts <- function(counts_file){
+  return(read_tsv(counts_file, col_names = c("Peak_ID", "Chr", "Start", "End", "Strand", "Length", "DNA1", "DNA2", "RNA1", "RNA2"),
+                  col_types = "cciiciiiii", skip = 2))
+} 
+
+AS_DEseq <- function(cts){
+  #First convert cts to a matrix of integer counts with row names represented by Peak_ID.
+  cts <- as.matrix(dplyr::select(cts, Peak_ID, DNA1, DNA2, RNA1, RNA2) %>% column_to_rownames(var = "Peak_ID"))
+  # Prepare dataframe of sample info
+  condition <- c("DNA", "DNA", "RNA", "RNA")
+  RNames <- c("DNA1", "DNA2", "RNA1", "RNA2")
+  coldata <- data.frame(row.names = RNames, condition)
+  if (print(all(rownames(coldata) == colnames(cts))) == TRUE) {
+    print(all(rownames(coldata) == colnames(cts)))
+    #Set up experimental design for DEseq2
+    dds <- DESeqDataSetFromMatrix(countData = cts, colData = coldata, design = ~ condition)
+    #differential expression analysis
+    return(DESeq(dds))
+  }
+}
+
+get_results <- function(dds) {
+  return(as.data.frame(lfcShrink(dds, coef="condition_RNA_vs_DNA", type="apeglm")) %>% rownames_to_column(var = "Peak_ID"))
+}
+
+get_active <- function(res, cts, L2FC = 0, p_adj = 0.05) {
+  return(filter(res, padj < p_adj) %>% filter(log2FoldChange > L2FC) %>% 
+           left_join(cts, by = c("Peak_ID" = "Peak_ID"), keep = FALSE) %>% 
+           dplyr::select(Chr, Start, End, Peak_ID, log2FoldChange, Strand, padj, Length) %>% 
+           dplyr::arrange(Chr, Start, End))
+}
+
+get_silent <- function(res, cts, L2FC = 0, p_adj = 0.05) {
+  return(filter(res, padj < p_adj) %>% filter(log2FoldChange < L2FC) %>% 
+           left_join(cts, by = c("Peak_ID" = "Peak_ID"), keep = FALSE) %>% 
+           dplyr::select(Chr, Start, End, Peak_ID, log2FoldChange, Strand, padj, Length) %>% 
+           dplyr::arrange(Chr, Start, End))
+}
+
+plot_volcano <- function(res, fraction = 0.05, title) {
+  res_volcano <- sample_frac(res, fraction) %>%
+  mutate(Classification = case_when(padj >= 0.1 ~ "Not Significant", padj < 0.1 & log2FoldChange > 0 ~ "Active", padj < 0.1 & log2FoldChange < 0 ~ "Silent")) %>%
+  filter(Classification != "NA")
+  res_volcano$Classification <- factor(res_volcano$Classification, levels = c("Active","Silent","Not Significant"))
+  #Volcano plot
+  volcano <- ggplot(res_volcano) +
+    geom_point(aes(x=log2FoldChange, y=-log10(padj), colour=Classification), size=0.25) +
+    geom_hline(yintercept = c(-log10(0.1)), linetype = "dashed") +
+    geom_vline(xintercept = c(0), linetype = "dashed") +
+    xlab(bquote(~log[2]~"Fold-Change (RNA/DNA)")) +
+    ylab(bquote("-"~log[10]~"BH-adjusted p-value")) +
+    coord_cartesian(xlim = c(-5, 5)) +
+    theme_bw(base_size = 8, base_family = "Arial") +
+    theme(legend.position = c(0.85,0.8), 
+          legend.title = element_blank()) +
+    scale_colour_manual(values=c("steelblue","firebrick","gray")) + 
+    guides(colour = guide_legend(override.aes = list(size = 2)))
+  return(volcano)
+}
+
+get_norm_cts <- function(dds, condition) {
+  return(counts(dds, normalized = TRUE) %>% as.data.frame() %>% rownames_to_column(var = "Peak_ID") %>% 
+    mutate(rep1 = log2(RNA1/DNA1), rep2 = log2(RNA2/DNA2), Condition=condition) %>% dplyr::filter(rep1 != "-Inf", rep2 != "-Inf"))
+}
+
+save_objects <- function(dir, prefix, dds, volcano) {
+  setwd(dir)
+  save(dds, file = paste0(prefix, "_dds.Rdata"))
+  ggsave(plot = volcano, filename = paste0(prefix, "_volcano.pdf"), device = cairo_pdf, units = "in", width = 4, height = 3)
+}
+```
+
+```{r, GM12878inGM12878: DESeq2}
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/activity/individual/")
+
+### DESeq2 Analysis ###
+#Read in counts matrix
+GG_cts <- read_counts(counts_file = 'cts_matricies/GM12878inGM12878_counts.tsv')
+#Run DESeq2 on the ATAC-STARR counts matrix
+GG_dds <- AS_DEseq(cts = GG_cts)
+#Extract results: RNA/DNA
+GG_res <- get_results(dds = GG_dds)
+
+### Filter and Save Results ###
+#Call active as L2FC > 0, padj < 0.1
+GG_active <- get_active(res = GG_res, cts=GG_cts, L2FC = 0, p_adj = 0.1)
+#Call silent as L2FC < 0, padj < 0.1
+GG_silent <- get_silent(res = GG_res, cts=GG_cts, L2FC = 0, p_adj = 0.1)
+#Save active and silent bed files. 
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/")
+#write_tsv(GG_active, "DESeq2_results/GM12878inGM12878_active_0.1padj.bed", col_names = FALSE)
+#write_tsv(GG_silent, "DESeq2_results/GM12878inGM12878_silent_0.1padj.bed", col_names = FALSE)
+
+### Extract Normalized Counts for Reproducibility Tests Below ###
+GG_cts <- get_norm_cts(dds = GG_dds, condition = "GM12878inGM12878")
+
+### Volcano Plot ###
+#Plot 5% of FGs on volcano plot. 
+GG_volcano <- plot_volcano(res = GG_res, fraction = 1, title="GM12878inGM12878 DESeq2 Results") 
+
+ggsave("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/ATAC-STARR_RE_analysis/GM12878inGM12878_volcano.tiff", plot = GG_volcano, width=4, height=3, units="in", dpi=300, compression = "lzw")
+
+### Export Objects ### 
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/")
+save_objects(dir = 'DESeq2_results/', prefix = "GM12878inGM12878", dds=GG_dds, volcano=GG_volcano)
+
+#Remove all GG objects because they are big and take up a big chunk of RAM. 
+remove(GG_res)
+remove(GG_dds)
+remove(GG_silent)
+remove(GG_active)
+remove(GG_volcano)
+```
+
+```{r, GM12878inLCL8664: DESeq2, message=FALSE}
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data")
+
+### DESeq2 Analysis ###
+#Read in counts matrix
+GL_cts <- read_counts(counts_file = 'ATAC-STARR_cts_matricies/GM12878inLCL8664_counts.tsv')
+#Run DESeq2 on the ATAC-STARR counts matrix
+GL_dds <- AS_DEseq(cts = GL_cts)
+#Extract results: RNA/DNA
+GL_res <- get_results(dds = GL_dds)
+
+### Filter and Save Results ###
+#Call active as L2FC > 0, padj < 0.1
+GL_active <- get_active(res = GL_res, cts=GL_cts, L2FC = 0, p_adj = 0.1)
+#Call silent as L2FC < 0, padj < 0.1
+GL_silent <- get_silent(res = GL_res, cts=GL_cts, L2FC = 0, p_adj = 0.1)
+#Save active and silent bed files. 
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data")
+write_tsv(GL_active, "DESeq2_results/GM12878inLCL8664_active_0.1padj.bed", col_names = FALSE)
+write_tsv(GL_silent, "DESeq2_results/GM12878inLCL8664_silent_0.1padj.bed", col_names = FALSE)
+
+### Extract Normalized Counts for Reproducibility Tests Below ###
+GL_cts <- get_norm_cts(dds = GL_dds, condition = "GM12878inLCL8664")
+
+### Volcano Plot ###
+#Plot 5% of FGs on volcano plot. 
+GL_volcano <- plot_volcano(res = GL_res, fraction = 0.05, title="GM12878inLCL8664 DESeq2 Results - 5%")
+
+### Export Objects ### 
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/")
+save_objects(dir = "DESeq2_results", prefix = "GM12878inLCL8664", dds=GL_dds, volcano=GL_volcano)
+
+#Remove all GL objects because they are big and take up a big chunk of RAM. 
+remove(GL_res)
+remove(GL_dds)
+remove(GL_silent)
+remove(GL_active)
+remove(GL_volcano)
+```
+
+```{r, LCL8664inGM12878: DESeq2, message=FALSE}
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data")
+
+### DESeq2 Analysis ###
+#Read in counts matrix
+LG_cts <- read_counts(counts_file = 'ATAC-STARR_cts_matricies/LCL8664inGM12878_counts.tsv')
+#Run DESeq2 on the ATAC-STARR counts matrix
+LG_dds <- AS_DEseq(cts = LG_cts)
+#Extract results: RNA/DNA
+LG_res <- get_results(dds = LG_dds)
+
+### Filter and Save Results ###
+#Call active as L2FC > 0, padj < 0.1
+LG_active <- get_active(res = LG_res, cts=LG_cts, L2FC = 0, p_adj = 0.1)
+#Call silent as L2FC < 0, padj < 0.1
+LG_silent <- get_silent(res = LG_res, cts=LG_cts, L2FC = 0, p_adj = 0.1)
+#Save active and silent bed files. 
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data")
+write_tsv(LG_active, "DESeq2_results/LCL8664inGM12878_active_0.1padj.bed", col_names = FALSE)
+write_tsv(LG_silent, "DESeq2_results/LCL8664inGM12878_silent_0.1padj.bed", col_names = FALSE)
+
+### Extract Normalized Counts for Reproducibility Tests Below ###
+LG_cts <- get_norm_cts(dds = LG_dds, condition = "LCL8664inGM12878")
+
+### Volcano Plot ###
+#Plot 5% of FGs on volcano plot. 
+LG_volcano <- plot_volcano(res = LG_res, fraction = 0.05, title="LCL8664inGM12878 DESeq2 Results - 5%")
+
+### Export Objects ### 
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/")
+save_objects(dir = "DESeq2_results", prefix = "LCL8664inGM12878", dds=LG_dds, volcano=LG_volcano)
+
+#Remove all LG objects because they are big and take up a big chunk of RAM. 
+remove(LG_res)
+remove(LG_dds)
+remove(LG_silent)
+remove(LG_active)
+remove(LG_volcano)
+```
+
+```{r, LCL8664inLCL8664: DESeq2, message=FALSE}
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data")
+
+### DESeq2 Analysis ###
+#Read in counts matrix
+LL_cts <- read_counts(counts_file = 'ATAC-STARR_cts_matricies/LCL8664inLCL8664_counts.tsv')
+#Run DESeq2 on the ATAC-STARR counts matrix
+LL_dds <- AS_DEseq(cts = LL_cts)
+#Extract results: RNA/DNA
+LL_res <- get_results(dds = LL_dds)
+
+### Filter and Save Results ###
+#Call active as L2FC > 0, padj < 0.1
+LL_active <- get_active(res = LL_res, cts=LL_cts, L2FC = 0, p_adj = 0.1)
+#Call silent as L2FC < 0, padj < 0.1
+LL_silent <- get_silent(res = LL_res, cts=LL_cts, L2FC = 0, p_adj = 0.1)
+#Save active and silent bed files. 
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data")
+write_tsv(LL_active, "DESeq2_results/LCL8664inLCL8664_active_0.1padj.bed", col_names = FALSE)
+write_tsv(LL_silent, "DESeq2_results/LCL8664inLCL8664_silent_0.1padj.bed", col_names = FALSE)
+
+### Extract Normalized Counts for Reproducibility Tests Below ###
+LL_cts <- get_norm_cts(dds = LL_dds, condition = "LCL8664inLCL8664")
+
+### Volcano Plot ###
+#Plot 5% of FGs on volcano plot. 
+LL_volcano <- plot_volcano(res = LL_res, fraction = 0.05, title="LCL8664inLCL8664 DESeq2 Results - 5%")
+
+### Export Objects ### 
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/")
+save_objects(dir = "DESeq2_results", prefix = "LCL8664inLCL8664", dds=LL_dds, volcano=LL_volcano)
+
+#Remove all LL objects because they are big and take up a big chunk of RAM. 
+remove(LL_res)
+remove(LL_dds)
+remove(LL_silent)
+remove(LL_active)
+remove(LL_volcano)
+```
+
+```{r Reproducibility, message=FALSE}
+#Merge counts and activity together in order to plot and facet by condition
+normal_counts <- bind_rows(GG_cts, GL_cts, LG_cts, LL_cts)
+
+#Plot correlation of activity scores and facet by condition. 
+corr_plot <- ggplot(normal_counts, aes(x=rep1, y=rep2)) +
+  geom_hex(bins = 100) +
+  scale_fill_continuous(type = "gradient") +
+  geom_abline(mapping=aes(slope=1, intercept=0), colour="black", linetype="dashed", size=0.25) + 
+  theme_bw(base_family = "Arial", base_size = 6) + 
+  xlab(expression(paste("Rep1 ", log[2](RNA/DNA)))) + 
+  ylab(expression(paste("Rep2 ", log[2](RNA/DNA)))) +
+  labs(fill = "Count") +
+  ggtitle("Correlation of Replicate ATAC-STARR Activities") +
+  scale_x_continuous(breaks = seq(-10, 10, by = 1)) +
+  scale_y_continuous(breaks = seq(-10, 10, by = 1)) +
+  facet_grid(cols = vars(Condition)) +
+  theme(plot.title = element_text(hjust = 0.5, size = 10, face = "bold"), 
+        strip.text = element_text(hjust = 0.5, size = 6, face = "italic"),
+        strip.background = element_rect(fill = "lightgray"))
+
+#Save plot
+setwd("C:/Users/hodges/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity_correlation/")
+ggsave(corr_plot, filename ="ATAC-STARR_DESeq-normalized-counts_activity-correlation.pdf", device = cairo_pdf, units = "in", height = 2.5, width = 8.5)
+  
+#Calculate correlations for each condition:
+print("GM12878inGM12878")
+cor.test(GG_cts$rep1, GG_cts$rep2, method = "spearman")
+cor.test(GG_cts$rep1, GG_cts$rep2, method = "pearson")
+
+print("GM12878inLCL8664")
+cor.test(GL_cts$rep1, GL_cts$rep2, method = "spearman")
+cor.test(GL_cts$rep1, GL_cts$rep2, method = "pearson")
+
+print("LCL8664inGM12878")
+cor.test(LG_cts$rep1, LG_cts$rep2, method = "spearman")
+cor.test(LG_cts$rep1, LG_cts$rep2, method = "pearson")
+
+print("LCL8664inLCL8664")
+cor.test(LL_cts$rep1, LL_cts$rep2, method = "spearman")
+cor.test(LL_cts$rep1, LL_cts$rep2, method = "pearson")
+```
+
+

@@ -1,0 +1,87 @@
+---
+title: "ATAC-STARR_Annotation+GO: All Samples"
+author: "Tyler Hansen"
+date: "April 29th, 2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is a script to perform annotation and gene assignment of DNA regions with the ChIPSeeker package. 
+In this script, the assigned genes are also subjected to pathway enrichment analysis with ClusterProfiler.
+
+Input: DNA regions (bed or peak format).
+Output: enhancer regions, promoter regions, doplots of GO results in eps and pdf formats.  
+
+This script contains useful functions that can be easily transferred to other scripts. 
+This particular version analyzes regions called as active or silent in the GMinGM and LCLinLCL ATAC-STARR datasets. 
+
+Note: Promoters are defined as 2kb upstream and 1kb downstream of the TSS and annotation priority is the following: "Promoter", "5UTR", "3UTR", "Exon", "Intron", "Downstream", "Intergenic". Anything in the promoter bin is called "proximal" while everything else is called "distal". 
+
+```{r, Libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(ChIPseeker)
+library(clusterProfiler)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(org.Hs.eg.db)
+library(ReactomePA)
+library(extrafont)
+loadfonts(device = "win")
+library(egg)
+```
+
+Analyze GMinGM regions. 
+```{r, Active , message=FALSE}
+annoP <- annotatePeak("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/activity/individual/DESeq2_results/bin-method/GM12878inGM12878_active_0.1padj_50-bin.merged.bed", tssRegion = c(-2000, 1000), TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", flankDistance = 5000)
+
+#Plot annotation:
+plotAnnoPie(annoP)
+
+cairo_pdf(filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ATAC-STARR_RE_analysis/GM12878_annotation-piechart_active.pdf")
+plotAnnoPie(annoP)
+dev.off()
+
+#Split annotated active peaks into proximal and distal subsets and format into a 3-column bed. 
+proximal <- as.data.frame(annoP) %>% filter(str_detect(annotation, 'Promoter')) %>% dplyr::select(seqnames, start, end) %>% arrange(seqnames, start, end)
+distal <- as.data.frame(annoP) %>% filter(!str_detect(annotation, 'Promoter')) %>% dplyr::select(seqnames, start, end) %>% arrange(seqnames, start, end)
+
+#Save bed files
+write_tsv(x = proximal, file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/activity/individual/DESeq2_results/bin-method/GM12878inGM12878_active_0.1padj_50-bin.merged.proximal.bed", col_names = FALSE)
+
+write_tsv(x = distal, file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/activity/individual/DESeq2_results/bin-method/GM12878inGM12878_active_0.1padj_50-bin.merged.distal.bed", col_names = FALSE)
+```
+
+```{r, Silent, message=FALSE}
+annoP <- annotatePeak("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/activity/individual/DESeq2_results/bin-method/GM12878inGM12878_silent_0.1padj_50-bin.merged.bed", tssRegion = c(-2000, 1000), TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", flankDistance = 5000)
+
+#Plot annotation:
+plotAnnoPie(annoP)
+
+cairo_pdf(filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ATAC-STARR_RE_analysis/GM12878_annotation-piechart_silent.pdf")
+plotAnnoPie(annoP)
+dev.off()
+
+#Split annotated active peaks into proximal and distal subsets and format into a 3-column bed. 
+proximal <- as.data.frame(annoP) %>% filter(str_detect(annotation, 'Promoter')) %>% dplyr::select(seqnames, start, end) %>% arrange(seqnames, start, end)
+distal <- as.data.frame(annoP) %>% filter(!str_detect(annotation, 'Promoter')) %>% dplyr::select(seqnames, start, end) %>% arrange(seqnames, start, end)
+
+#Save bed files
+write_tsv(x = proximal, file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/activity/individual/DESeq2_results/bin-method/GM12878inGM12878_silent_0.1padj_50-bin.merged.proximal.bed", col_names = FALSE)
+
+write_tsv(x = distal, file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/activity/individual/DESeq2_results/bin-method/GM12878inGM12878_silent_0.1padj_50-bin.merged.distal.bed", col_names = FALSE)
+```
+
+```{r}
+active <- annotatePeak("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/activity/individual/DESeq2_results/bin-method/GM12878inGM12878_active_0.1padj_50-bin.merged.bed", tssRegion = c(-2000, 1000), TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", flankDistance = 5000)
+
+silent <- annotatePeak("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/activity/individual/DESeq2_results/bin-method/GM12878inGM12878_silent_0.1padj_50-bin.merged.bed", tssRegion = c(-2000, 1000), TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", flankDistance = 5000)
+
+bar <- plotAnnoBar(list(`Active Peaks`=active, `Silent Peaks`=silent)) + theme_bw(base_size = 8, base_family = "Arial") + theme(legend.key.size = unit(0.1, "in"), legend.title = element_blank(), plot.title = element_blank(), legend.position = "top", legend.text = element_text(size = 6)) 
+
+ggsave("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ATAC-STARR_RE_analysis/GM12878_annotation-barchart.pdf", plot = bar, device = cairo_pdf, width = 4, height = 2)
+```
+

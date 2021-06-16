@@ -1,0 +1,121 @@
+#!/bin/bash
+#SBATCH --mail-user=tyler.j.hansen@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=1:00:00
+#SBATCH --mem=8G
+##################
+#Tyler Hansen 1/12/21: updated version using a much faster strategy that Tim Scott and I came up with. 
+#This script is a slurm script to remove reduncancy by isolating the highest scoring FG within the redundant region.
+#This uses a single awk command and is insanely fast. 
+##################
+
+#Make function: 1 is the input file. 2 is the output file. Active sorts by highest score, Silent by lowest score. The input file MUST have the 5th column as score and the 4th column as peak_ID/name. 
+remove_redundancy_active () {
+    sort -k1,1 -k2,2n -k3,3n $1 | awk -v overlapGroupChr=1 -v overlapGroupStart="Chr0" -v overlapGroupEnd=1 -v scoreMax=0 -v rightestEnd=1 -v peakID="Peak_0" 'BEGIN{OFS=FS="\t";overlapGroupChr="Chr0";overlapGroupStart=0;overlapGroupEnd=2
+    scoreMax=1;rightestEnd=1;peakID="Peak_0"} {
+            # Check if we are NOT in a new overlapping group
+            if (( (($2-overlapGroupEnd)>0) && ($2>rightestEnd) ) || ($1!=overlapGroupChr) ) {
+                    # dump our variables in current state
+                    print overlapGroupChr,overlapGroupStart,overlapGroupEnd,peakID,scoreMax;
+                    # reset variables
+                    overlapGroupChr=$1;
+                    overlapGroupStart=$2;
+                    overlapGroupEnd=$3;
+                    peakID=$4;
+                    scoreMax=$5;
+                    rightestEnd=$3;
+            }else { # else, we must still be overlapping
+                    if ($5>scoreMax) {
+                            overlapGroupChr=$1;
+                            overlapGroupStart=$2;
+                            overlapGroupEnd=$3;
+                            peakID=$4;
+                            scoreMax=$5;
+                            if ($3>rightestEnd) {
+                                    rightestEnd=$3;
+                            };
+                    } else {
+                        if ($3>rightestEnd) {
+                                    rightestEnd=$3;
+                            };
+                    }
+            }
+    } END {print overlapGroupChr,overlapGroupStart,overlapGroupEnd,peakID,scoreMax}' - | \
+    awk 'BEGIN{FS=OFS="/t"}{if (NR>1) print}' - > $2
+}
+
+remove_redundancy_silent () {
+    sort -k1,1 -k2,2n -k3,3n $1 | awk -v overlapGroupChr=1 -v overlapGroupStart="Chr0" -v overlapGroupEnd=1 -v scoreMax=0 -v rightestEnd=1 -v peakID="Peak_0" 'BEGIN{OFS=FS="\t";overlapGroupChr="Chr0";overlapGroupStart=0;overlapGroupEnd=2
+    scoreMax=1;rightestEnd=1;peakID="Peak_0"} {
+            # Check if we are NOT in a new overlapping group
+            if (( (($2-overlapGroupEnd)>0) && ($2>rightestEnd) ) || ($1!=overlapGroupChr) ) {
+                    # dump our variables in current state
+                    print overlapGroupChr,overlapGroupStart,overlapGroupEnd,peakID,scoreMax;
+                    # reset variables
+                    overlapGroupChr=$1;
+                    overlapGroupStart=$2;
+                    overlapGroupEnd=$3;
+                    peakID=$4;
+                    scoreMax=$5;
+                    rightestEnd=$3;
+            }else { # else, we must still be overlapping
+                    if ($5<scoreMax) {
+                            overlapGroupChr=$1;
+                            overlapGroupStart=$2;
+                            overlapGroupEnd=$3;
+                            peakID=$4;
+                            scoreMax=$5;
+                            if ($3>rightestEnd) {
+                                    rightestEnd=$3;
+                            };
+                    } else {
+                        if ($3>rightestEnd) {
+                                    rightestEnd=$3;
+                            };
+                    }
+            }
+    } END {print overlapGroupChr,overlapGroupStart,overlapGroupEnd,peakID,scoreMax}' - | \
+    awk 'BEGIN{FS=OFS="/t"}{if (NR>1) print}' - > $2
+}
+
+##APPLY FUNCTION TO REMOVE REDUNDANCY##
+module restore bedtools
+INPUT_DIR='/data/hodges_lab/ATAC-STARR_V2/data/DESeq2_results'
+OUTPUT_DIR='/data/hodges_lab/ATAC-STARR_V2/data/ATAC-STARR_REs'
+
+#With Duplicates
+#GM12878inGM12878
+remove_redundancy_active ${INPUT_DIR}/GM12878inGM12878_active_0.1padj.bed ${OUTPUT_DIR}/GM12878inGM12878_active-REs_0.1padj.bed
+remove_redundancy_silent ${INPUT_DIR}/GM12878inGM12878_silent_0.1padj.bed ${OUTPUT_DIR}/GM12878inGM12878_silent-REs_0.1padj.bed
+
+#GM12878inLCL8664
+remove_redundancy_active ${INPUT_DIR}/GM12878inLCL8664_active_0.1padj.bed ${OUTPUT_DIR}/GM12878inLCL8664_active-REs_0.1padj.bed
+remove_redundancy_silent ${INPUT_DIR}/GM12878inLCL8664_silent_0.1padj.bed ${OUTPUT_DIR}/GM12878inLCL8664_silent-REs_0.1padj.bed
+
+#LCL8664inGM12878
+remove_redundancy_active ${INPUT_DIR}/LCL8664inGM12878_active_0.1padj.bed ${OUTPUT_DIR}/LCL8664inGM12878_active-REs_0.1padj.bed
+remove_redundancy_silent ${INPUT_DIR}/LCL8664inGM12878_silent_0.1padj.bed ${OUTPUT_DIR}/LCL8664inGM12878_silent-REs_0.1padj.bed
+
+#LCL8664inLCL8664
+remove_redundancy_active ${INPUT_DIR}/LCL8664inLCL8664_active_0.1padj.bed ${OUTPUT_DIR}/LCL8664inLCL8664_active-REs_0.1padj.bed
+remove_redundancy_silent ${INPUT_DIR}/LCL8664inLCL8664_silent_0.1padj.bed ${OUTPUT_DIR}/LCL8664inLCL8664_silent-REs_0.1padj.bed
+
+#Deduplicated
+#GM12878inGM12878
+remove_redundancy_active ${INPUT_DIR}/GM12878inGM12878_active_deduplicated_0.1padj.bed ${OUTPUT_DIR}/GM12878inGM12878_active-REs_deduplicated_0.1padj.bed
+remove_redundancy_silent ${INPUT_DIR}/GM12878inGM12878_silent_deduplicated_0.1padj.bed ${OUTPUT_DIR}/GM12878inGM12878_silent-REs_deduplicated_0.1padj.bed
+
+#GM12878inLCL8664
+remove_redundancy_active ${INPUT_DIR}/GM12878inLCL8664_active_deduplicated_0.1padj.bed ${OUTPUT_DIR}/GM12878inLCL8664_active-REs_deduplicated_0.1padj.bed
+remove_redundancy_silent ${INPUT_DIR}/GM12878inLCL8664_silent_deduplicated_0.1padj.bed ${OUTPUT_DIR}/GM12878inLCL8664_silent-REs_deduplicated_0.1padj.bed
+
+#LCL8664inGM12878
+remove_redundancy_active ${INPUT_DIR}/LCL8664inGM12878_active_deduplicated_0.1padj.bed ${OUTPUT_DIR}/LCL8664inGM12878_active-REs_deduplicated_0.1padj.bed
+remove_redundancy_silent ${INPUT_DIR}/LCL8664inGM12878_silent_deduplicated_0.1padj.bed ${OUTPUT_DIR}/LCL8664inGM12878_silent-REs_deduplicated_0.1padj.bed
+
+#LCL8664inLCL8664
+remove_redundancy_active ${INPUT_DIR}/LCL8664inLCL8664_active_deduplicated_0.1padj.bed ${OUTPUT_DIR}/LCL8664inLCL8664_active-REs_deduplicated_0.1padj.bed
+remove_redundancy_silent ${INPUT_DIR}/LCL8664inLCL8664_silent_deduplicated_0.1padj.bed ${OUTPUT_DIR}/LCL8664inLCL8664_silent-REs_deduplicated_0.1padj.bed

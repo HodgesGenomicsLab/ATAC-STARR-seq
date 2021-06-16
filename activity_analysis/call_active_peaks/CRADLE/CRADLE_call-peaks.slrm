@@ -1,0 +1,57 @@
+#!/bin/bash
+#SBATCH --mail-user=tyler.j.hansen@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --constraint=haswell
+#SBATCH --cpus-per-task=8
+#SBATCH --time=4:00:00
+#SBATCH --mem=64G
+#######################################################   
+# Need to run on a specific node for some dumb reason. 
+####################################################### 
+INPUT='/data/hodges_lab/ATAC-STARR_V2/data/bams/pos-sorted'
+OUTPUT='/data/hodges_lab/ATAC-STARR_V2/data/CRADLE'
+OCRs='/data/hodges_lab/ATAC-STARR_V2/data/genrich_ATAC-like_peaks'
+CRADLE='/data/hodges_lab/public_data/CRADLE_covariates'
+
+#module restore tools
+#samtools index /data/hodges_lab/ATAC-STARR_V2/data/bams/pos-sorted/GM12878inGM12878_RNA_Rep1.filtered.pos-sorted.bam /data/hodges_lab/ATAC-STARR_V2/data/bams/pos-sorted/GM12878inGM12878_RNA_Rep1.filtered.pos-sorted.bam.bai
+
+#module restore anaconda
+#source activate deep_tools_v1
+#for file in GM12878inGM12878_RNA_Rep1 #GM12878inGM12878_RNA_Rep2 GM12878inGM12878_DNA_Rep1 GM12878inGM12878_DNA_Rep2
+#do
+#    bamCoverage -b ${INPUT}/${file}.filtered.pos-sorted.bam -o ${OUTPUT}/un-normalized_bigWigs/${file}.bw \
+#        --normalizeUsing None --binSize 1 --extendReads -p 8
+#done
+
+module load Intel/2017.4.196 Python/3.6.3
+source /home/hansetj1/cradle_venv/bin/activate #12hrs
+#cradle correctBias -ctrlbw ${OUTPUT}/un-normalized_bigWigs/GM12878inGM12878_DNA_Rep1.bw ${OUTPUT}/un-normalized_bigWigs/GM12878inGM12878_DNA_Rep2.bw \
+#                   -expbw ${OUTPUT}/un-normalized_bigWigs/GM12878inGM12878_RNA_Rep1.bw ${OUTPUT}/un-normalized_bigWigs/GM12878inGM12878_RNA_Rep2.bw \
+#                   -l 160 \
+#                   -r ${OCRs}/GM12878inGM12878_DNA_genrich_0.005-qvalue.narrowPeak \
+#                   -biasType pcr \
+#                   -faFile /data/hodges_lab/hg38_genome/hg38.2bit \
+#                   -o ${OUTPUT}/CRADLE_corrected_within_OCRs/GM12878inGM12878_PCR-corrected \
+#                   -bl /home/hansetj1/hg38_encode_blacklist_ENCFF356LFX.bed \
+#                   -p 8 \
+#                   -norm True \
+#                   -generateNormBW True
+
+# -l is the median fragment length, which is different for all samples. This is the median reported by picard. 
+
+cradle callPeak -ctrlbw ${OUTPUT}/CRADLE_corrected_within_OCRs/GM12878inGM12878_PCR-corrected/GM12878inGM12878_DNA_Rep1_corrected.bw \
+                ${OUTPUT}/CRADLE_corrected_within_OCRs/GM12878inGM12878_PCR-corrected/GM12878inGM12878_DNA_Rep2_corrected.bw \
+                -expbw ${OUTPUT}/CRADLE_corrected_within_OCRs/GM12878inGM12878_PCR-corrected/GM12878inGM12878_RNA_Rep1_corrected.bw \
+                ${OUTPUT}/CRADLE_corrected_within_OCRs/GM12878inGM12878_PCR-corrected/GM12878inGM12878_RNA_Rep2_corrected.bw \
+                -r ${OCRs}/GM12878inGM12878_DNA_genrich_0.005-qvalue.narrowPeak \
+                -rbin 240 \
+                -wbin 25 \
+                -fdr 0.25 \
+                -o ${OUTPUT}/CRADLE_corrected_within_OCRs/GM12878inGM12878_Peaks \
+                -p 8 
+
+# -rbin is the big bin that is used in the first step of the analysis. -wbin is the second, smaller bin for the 2nd part of the analysis. 
+# The rationale for the settings here are the equations used in the paper: rbim=1.5*l and wbin=l/6. 
+#-fdr is set for the call of the first step. the second step is the fdr*(#selected/#total). When I did this last time at fdr=2 the FDR became 0.45. Therefore increasing to 0.25 should get the final FDR closer to 0.1. 

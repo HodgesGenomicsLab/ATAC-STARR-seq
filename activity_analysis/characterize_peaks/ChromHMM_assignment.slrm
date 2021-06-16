@@ -1,0 +1,30 @@
+#!/bin/bash
+#SBATCH --mail-user=tyler.j.hansen@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=01:00:00
+#SBATCH --mem=16G
+#######################################################
+#Tyler Hansen
+
+#BedFiles
+CHMM_DIR='/data/hodges_lab/public_data/GM12878/obtained_as_processed_files'
+AS_DIR='/data/hodges_lab/ATAC-STARR_V2/data/activity/individual/DESeq2_results/bin-method'
+OCR_DIR='/data/hodges_lab/ATAC-STARR_V2/data/accessibility/genrich_ATAC-like_peaks'
+
+#Output
+OUTPUT_DIR='/data/hodges_lab/ATAC-STARR_V2/results/activity/ChromHMM_assignment'
+
+#Software
+module restore tools 
+
+bedtools intersect -u -a ${CHMM_DIR}/GM12878_ChromHMM_18-state_E116_18_core_K27ac_hg38lift_mnemonics.bed \
+    -b ${AS_DIR}/GM12878inGM12878_active_0.1padj_50-bin.merged.bed > ${OUTPUT_DIR}/GM12878inGM12878_active_0.1padj_50-bin_ChromHMM.bed
+
+bedtools intersect -u -a ${CHMM_DIR}/GM12878_ChromHMM_18-state_E116_18_core_K27ac_hg38lift_mnemonics.bed \
+    -b ${AS_DIR}/GM12878inGM12878_silent_0.1padj_50-bin.merged.bed > ${OUTPUT_DIR}/GM12878inGM12878_silent_0.1padj_50-bin_ChromHMM.bed
+
+bedtools intersect -u -a ${CHMM_DIR}/GM12878_ChromHMM_18-state_E116_18_core_K27ac_hg38lift_mnemonics.bed \
+    -b ${OCR_DIR}/GM12878inGM12878_DNA_genrich_0.0001-qvalue.3col.bed > ${OUTPUT_DIR}/GM12878inGM12878_DNA_genrich_0.0001-qvalue_ChromHMM.bed

@@ -1,0 +1,88 @@
+#!/bin/bash
+#SBATCH --mail-user=tyler.j.hansen@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1                                                                                                
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=01:00:00
+#SBATCH --mem=16G
+#######################################################                                                                                                                 
+# Tyler Hansen - 2021-02-04
+# This is a script to conduct footprinting on three "ATAC-seq" datasets using the TOBIAS package. 
+
+#Now we can footprint!
+module restore anaconda
+source activate tobias
+
+#Plot Aggregates of CTCF, IRF8, SpiB, JunB, ETS1 for GMinGM and Buenrostro
+#Buenrostro first
+#DIR='/data/hodges_lab/public_data/GM12878/obtained_as_raw_files/ATAC_GM12878_2013-buenrostro/data/footprinting'
+#for TF in CTCF_MA0139.1 IRF8_MA0652.1 SPIB_MA0081.2 JUNB_MA0490.2 ETS1_MA0098.3
+#do 
+#    TOBIAS PlotAggregate --TFBS ${DIR}/BINDetect/${TF}/beds/${TF}_all.bed \
+#        --signals ${DIR}/ATACorrect/GM12878_ATAC-seq_buenrostro_corrected.bw \
+#        --output ${DIR}/PlotAggregate/${TF}_footprint_all_Buenrostro.pdf \
+#        --plot_boundaries --signal-labels "Buenrostro et al. 2013 ATAC-seq"
+#done 
+
+#Next, GM12878 ATAC-STARR
+#DIR='/data/hodges_lab/ATAC-STARR_V2/data/footprinting'
+#for TF in CTCF_MA0139.1 IRF8_MA0652.1 SPIB_MA0081.2 JUNB_MA0490.2 ETS1_MA0098.3
+#do 
+#    TOBIAS PlotAggregate --TFBS ${DIR}/BINDetect/GM12878inGM12878/${TF}/beds/${TF}_all.bed \
+#        --signals ${DIR}/ATACorrect/GM12878inGM12878_DNA_corrected.bw \
+#        --output ${DIR}/PlotAggregate/${TF}_footprint_all_GM12878-ATAC-STARR.pdf \
+#        --plot_boundaries --signal-labels "ATAC-STARR Accessibility - GM12878"
+#done 
+
+#Finally, LCL8664inLCL8664
+#DIR='/data/hodges_lab/ATAC-STARR_V2/data/footprinting'
+#for TF in CTCF_MA0139.1 IRF8_MA0652.1 SPIB_MA0081.2 JUNB_MA0490.2 ETS1_MA0098.3
+#do 
+#   TOBIAS PlotAggregate --TFBS ${DIR}/BINDetect/LCL8664inLCL8664/${TF}/beds/${TF}_all.bed \
+#        --signals ${DIR}/ATACorrect/LCL8664inLCL8664_DNA_corrected.bw \
+#        --output ${DIR}/PlotAggregate/${TF}_footprint_all_LCL8664-ATAC-STARR.pdf \
+#        --plot_boundaries --signal-labels "ATAC-STARR Accessibility - LCL8664"
+#done 
+
+#Plot Aggregate Comparisons:
+#Buenrostro vs ATAC-STARR
+for TF in CTCF_MA0139.1 IRF8_MA0652.1 JUNB_MA0490.2 NFKB1_MA0105.4
+do 
+    TOBIAS PlotAggregate --TFBS /data/hodges_lab/public_data/GM12878/obtained_as_raw_files/ATAC_GM12878_2013-buenrostro/data/footprinting/BINDetect/${TF}/beds/${TF}_all.bed \
+        /data/hodges_lab/ATAC-STARR_V2/data/footprinting/BINDetect/GM12878inGM12878/${TF}/beds/${TF}_all.bed \
+        --signals /data/hodges_lab/public_data/GM12878/obtained_as_raw_files/ATAC_GM12878_2013-buenrostro/data/footprinting/ATACorrect/GM12878_ATAC-seq_buenrostro_corrected.bw \
+        /data/hodges_lab/ATAC-STARR_V2/data/footprinting/ATACorrect/GM12878inGM12878_DNA_corrected.bw \
+        --output /data/hodges_lab/ATAC-STARR_V2/data/footprinting/PlotAggregate/${TF}_footprint_all_AS-vs-Buenrostro.pdf \
+        --plot_boundaries --TFBS-labels ${TF}_"ATAC-seq" ${TF}_"ATAC-STARR" --signal_labels "2013 Buenrostro et al. ATAC-seq" "ATAC-STARR Accessibilty"
+done 
+
+#Plot Heatmaps:
+#Buenrostro first!
+#DIR='/data/hodges_lab/public_data/GM12878/obtained_as_raw_files/ATAC_GM12878_2013-buenrostro/data/footprinting'
+#for TF in CTCF_MA0139.1 IRF8_MA0652.1 SPIB_MA0081.2 JUNB_MA0490.2 ETS1_MA0098.3
+#do
+#    TOBIAS PlotHeatmap --TFBS ${DIR}/BINDetect/${TF}/beds/${TF}_GM12878_ATAC-seq_buenrostro_bound.bed ${DIR}/BINDetect/${TF}/beds/${TF}_GM12878_ATAC-seq_buenrostro_unbound.bed \
+#    --signals ${DIR}/ATACorrect/GM12878_ATAC-seq_buenrostro_corrected.bw \
+#    --output ${DIR}/PlotHeatmap/${TF}_footprint_heatmap_bound+unbound_Buenrostro.pdf --signal_labels "Buenrostro et al. 2013 ATAC-seq" --share_colorbar
+#done
+
+#Next, GM12878 ATAC-STARR
+#DIR='/data/hodges_lab/ATAC-STARR_V2/data/footprinting'
+#for TF in CTCF_MA0139.1 IRF8_MA0652.1 SPIB_MA0081.2 JUNB_MA0490.2 ETS1_MA0098.3
+#do
+#    TOBIAS PlotHeatmap --TFBS ${DIR}/BINDetect/GM12878inGM12878/${TF}/beds/${TF}_GM12878inGM12878_DNA_bound.bed \
+#    ${DIR}/BINDetect/GM12878inGM12878/${TF}/beds/${TF}_GM12878inGM12878_DNA_unbound.bed \
+#    --signals ${DIR}/ATACorrect/GM12878inGM12878_DNA_corrected.bw \
+#    --output ${DIR}/PlotHeatmap/${TF}_footprint_heatmap_bound+unbound_GM12878-ATAC-STARR.pdf --signal_labels "ATAC-STARR Accessibility - GM12878" --share_colorbar
+#done
+
+#DIR='/data/hodges_lab/ATAC-STARR_V2/data/footprinting'
+#for TF in CTCF_MA0139.1 IRF8_MA0652.1 SPIB_MA0081.2 JUNB_MA0490.2 ETS1_MA0098.3
+#do
+#    TOBIAS PlotHeatmap --TFBS ${DIR}/BINDetect/LCL8664inLCL8664/${TF}/beds/${TF}_LCL8664inLCL8664_DNA_bound.bed \
+#    ${DIR}/BINDetect/LCL8664inLCL8664/${TF}/beds/${TF}_LCL8664inLCL8664_DNA_unbound.bed \
+#    --signals ${DIR}/ATACorrect/LCL8664inLCL8664_DNA_corrected.bw \
+#    --output ${DIR}/PlotHeatmap/${TF}_footprint_heatmap_bound+unbound_LCL8664-ATAC-STARR.pdf --signal_labels "ATAC-STARR Accessibility - LCL8664" --share_colorbar
+#done
+

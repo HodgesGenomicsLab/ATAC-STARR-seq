@@ -1,0 +1,164 @@
+#!/bin/bash
+#SBATCH --mail-user=tyler.j.hansen@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=1-00:00:00
+#SBATCH --mem=64G
+#######################################################                                                                                                                 
+#Tyler Hansen - 2020-08-12
+
+#This is a slurm script for processing fastq files.                                                                                                                     
+#There are seven functions that each carry out discrete steps of this processing. 
+#These functions are all wrapped into one master function called process_fastq.
+
+#This inputs fastq files and ouputs intermediate and processed bam files. 
+#It also generates several results, including trimming reports, fastqc, and flagstat results. 
+#These are stored in a data-labeled folder generated within the script within the results directory. 
+
+#For this script to work, it requires that you have a project directory 
+# with raw fastq files stored in the following location: data/fastq/raw_reads (relative path to project directory)
+#The function prep_filesystem can be run to set up this filesystem prior to executing this script, 
+# and is here so that the script will work as long as the raw_reads are in the directory listed above. 
+#######################################################
+
+### Functions ###
+#Funtion to prepare the project directory by creating a filesystem compatible with this script. 
+prep_filesystem () # must be in project directory when executing command. 
+{
+    mkdir data bin results
+    cd data
+    mkdir bams bed bedGraph bigWig fastq
+    cd bams
+    mkdir n-sorted pos-sorted processing_intermediates
+    cd ../fastq
+    mkdir raw_reads trimmed_reads
+    cd ../../results
+    mkdir "$(date +"%Y-%m-%d")_processing_results"
+    cd $(date +"%Y-%m-%d")_processing_results
+    mkdir fastQC trimming_reports flagstat
+}
+
+#Function to trim and run fastQC on fastq files. FastQC must be installed and in the $PATH. 
+trim () #arg1=R1_file (no path) #arg2=R1_file (no path) #arg3=output_name
+{
+    module restore trim_and_map
+    #Trim reads and assess quality with Trim Galore! The input files can be gzipped.
+    echo "trimming"
+    trim_galore --fastqc --fastqc_args "--outdir results/$(date +"%Y-%m-%d")_processing_results/fastQC" \
+        --paired --dont_gzip --basename $3 --output_dir data/fastq/trimmed_reads data/fastq/raw_reads/$1 data/fastq/raw_reads/$2
+    #Move trimming reports to their directory.                                                                                                                              
+    mv data/fastq/trimmed_reads/*trimming_report* results/$(date +"%Y-%m-%d")_processing_results/trimming_reports
+}
+
+#Function to map trimmed reads to the genome of interest. Compatible with hg38 and rheMac10
+map () #arg1=input_filename (no file-ending)
+{
+    module restore trim_and_map
+    INDEX='/data/hodges_lab/hg38_genome/bt2/hg38'
+
+    ##Map reads to the human genome##
+        #-X corresponds to the maximum fragment length. DEFAULT = 500bp
+        #--no-discordant removes reads that fail to meet alignment criteria (specified by no mixed/contain/overlap)
+        #--no-mixed disables single-end read alignment for paired reads that cannot be mapped
+        #--sensitive -> Same as: -D 15 -R 2 -N 0 -L 22 -i S,1,1.15 DEFAULT
+    echo "mapping"
+    bowtie2 -p 8 -X 500 --sensitive --no-discordant --no-mixed -x $INDEX -1 data/fastq/trimmed_reads/${1}_val_1.fq -2 data/fastq/trimmed_reads/${1}_val_2.fq -S data/bams/processing_intermediates/${1}.sam
+}
+
+#Function to filter sam files by MAPQ score > 30 and reads mapping to blacklist regions or mtDNA. 
+filter () #arg1=input_filename (no file-ending)
+{
+    #Convert Sam to Bam and filter for MAPQ > 30, then sort by chromosome. -q filters for mapping quality scores > 30.
+    module restore sam
+    cd data/bams/processing_intermediates
+    echo "convert sam to bam & filter for MAPQ > 30 & sort bam"
+    samtools view -@ 8 -S -b -q 30 ${1}.sam | samtools sort -@8 - -o ${1}.bam
+    #Index sorted bam files
+    echo " index sorted bam files"
+    samtools index -b ${1}.bam ${1}.bam.bai
+    #Remove mtDNA reads
+    echo "remove mtDNA reads"
+    samtools view -@ 8 -b ${1}.bam chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 \
+    chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chr20 chr21 chr22 chrX chrY > ${1}.no_chrM.bam
+    #Index no chrM bam files
+    echo "Index no_ChrM files"
+    samtools index -b ${1}.no_chrM.bam  ${1}.no_chrM.bam.bai
+    #filter against blacklisted regions
+    echo "remove blacklisted regions"
+    samtools view -@ 8 -b -L ~/hg38_encode_blacklist_ENCFF356LFX.bed -U ${1}.filtered.unsorted.bam ${1}.no_chrM.bam > ${1}.blacklisted.bam
+    samtools sort -@ 8 ${1}.filtered.unsorted.bam > ${1}.filtered.bam
+    echo "Index filtered files"
+    samtools index -b ${1}.filtered.bam ${1}.filtered.bam.bai
+}    
+
+#Function to create two files: one without any duplicates and one without optical duplicates. 
+remove_duplicates () #arg1=input_filename (no file-ending)
+{
+    #remove sequencing duplicates:
+    cd data/bams/processing_intermediates
+    echo "removing sequencing duplicates"
+    module restore picard
+    java -jar $EBROOTPICARD/picard.jar MarkDuplicates I=${1}.filtered.bam O=${1}.no_SeqDup.bam M=${1}_marked_dup_metrics-optical.txt REMOVE_SEQUENCING_DUPLICATES=TRUE
+    java -jar $EBROOTPICARD/picard.jar MarkDuplicates I=${1}.filtered.bam O=${1}.unique.bam M=${1}_marked_dup_metrics-all.txt REMOVE_DUPLICATES=TRUE
+}    
+
+#Function to sort the filtered, noDup, and unique files by both position and name. This also files sorted bams into new directories and creates and index for each. 
+sort_file_index () #arg1=input_filename (no file-ending)
+{
+    module restore sam
+    for i in filtered no_SeqDup unique 
+    do
+        #Sort bams by pos and name into a new directories.
+        echo "sorting"
+        samtools sort -@ 8 data/bams/processing_intermediates/${1}.${i}.bam > data/bams/pos-sorted/${1}.${i}.pos-sorted.bam
+        samtools sort -@ 8 -n data/bams/processing_intermediates/${1}.${i}.bam > data/bams/n-sorted/${1}.${i}.n-sorted.bam
+        #Make index files. Note: only pos-sorted files can be indexed. 
+        echo "indexing"
+        samtools index -b -@ 8 data/bams/pos-sorted/${1}.${i}.pos-sorted.bam data/bams/pos-sorted/${1}.${i}.pos-sorted.bam.bai
+    done
+}
+
+#Funciton to calcualate readcount for each bam by running flagstat on all intermediates files. Good for determining how many reads were lost at each step.
+flagstat () #arg1=input_filename (no file-ending)
+{
+    module restore sam 
+    for i in sam bam no_chrM.bam filtered.bam no_SeqDup.bam unique.bam
+    do
+        #run flagstat on all bam/sam files to get read counts and save to a txt file in the results directory.  
+        samtools flagstat data/bams/processing_intermediates/${1}.${i} > results/$(date +"%Y-%m-%d")_processing_results/flagstat/${1}.${i}_flagstat-results.txt 
+    done
+}
+
+#Master function
+process_fastq () #arg1=project_directory_path #arg2=input_read1 #arg3=input_read2 #arg4=output_filename
+{
+    cd $1
+    prep_filesystem
+    cd $1
+    #trim $2 $3 $4
+    cd $1
+    map $4
+    cd $1
+    filter $4
+    cd $1
+    remove_duplicates $4
+    cd $1
+    sort_file_index $4
+    cd $1
+    prep_filesystem
+    cd $1
+    flagstat $4 $5
+}
+
+### Execute Functions ###
+# syntax: process_fastq /data/hodges_lab/ATAC-STARR_V2 <input_read1> <input_read2> <output_filename>
+
+process_fastq /data/hodges_lab/ATAC-STARR_V2 5186-TH-1-TAAGGCGA-AGAGTAGA_S01_L005_R1_001.fastq.gz 5186-TH-1-TAAGGCGA-AGAGTAGA_S01_L005_R2_001.fastq.gz GM12878inGM12878_DNA_Rep1
+
+process_fastq /data/hodges_lab/ATAC-STARR_V2 5186-TH-2-CGTACTAG-AGAGTAGA_S01_L005_R1_001.fastq.gz 5186-TH-2-CGTACTAG-AGAGTAGA_S01_L005_R2_001.fastq.gz GM12878inGM12878_DNA_Rep2
+
+process_fastq /data/hodges_lab/ATAC-STARR_V2 5186-TH-5-TAAGGCGA-GTAAGGAG_S01_L005_R1_001.fastq.gz 5186-TH-5-TAAGGCGA-GTAAGGAG_S01_L005_R2_001.fastq.gz GM12878inGM12878_RNA_Rep1
+
+process_fastq /data/hodges_lab/ATAC-STARR_V2 5186-TH-6-CGTACTAG-GTAAGGAG_S01_L005_R1_001.fastq.gz 5186-TH-6-CGTACTAG-GTAAGGAG_S01_L005_R2_001.fastq.gz GM12878inGM12878_RNA_Rep2
