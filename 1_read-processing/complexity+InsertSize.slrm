@@ -1,0 +1,30 @@
+#!/bin/bash
+#SBATCH --mail-user=tyler.j.hansen@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=32G
+#SBATCH --time=12:00:00
+#SBATCH --output=complexity-%j.out
+
+#This script will run the lc_extrap command to estimate the complexity of the library if I were to sequence at a greater depth. It will also run the c-curve which is the actual complexity curve. 
+#This script will also use picard's estimate library complexity tool as another way to measure complexity. 
+#As an additional analysis, this script will also collect the distribution of the insert sizes.
+#Together this script should be run directly after initial processing.  
+#The input is a pos sorted bam file and the output is a table (as .txt) that I can important into R to make a plot with ggplot. 
+#preseq is dependant on GSL, which is dependant on GCC. These are assembled into the preseq lmod collection. 
+
+date
+
+INPUT_DIR='/data/hodges_lab/ATAC-STARR_V2/data/bams/pos-sorted'
+OUTPUT_DIR='/data/hodges_lab/ATAC-STARR_V2/results/Library_Complexity/'
+
+for i in GM12878-ASPL_complexity-check GM12878inGM12878_DNA_Rep1 GM12878inGM12878_DNA_Rep2 GM12878inGM12878_RNA_Rep1 GM12878inGM12878_RNA_Rep2
+do
+	#lc_extrap (preseq)
+	module restore preseq
+	preseq lc_extrap -pe -verbose -o ${OUTPUT_DIR}/lc-extrap/${i}_lc-extrap-results.txt -bam ${INPUT_DIR}/${i}.filtered.pos-sorted.bam
+	#picard collect insert-size-metrics
+	java -jar $EBROOTPICARD/picard.jar CollectInsertSizeMetrics I=${INPUT_DIR}/${i}.filtered.pos-sorted.bam H=${OUTPUT_DIR}/picard-CISM/${i}_histogram.pdf O=${OUTPUT_DIR}/picard-CISM/${i}_picard-CISM.txt
+done

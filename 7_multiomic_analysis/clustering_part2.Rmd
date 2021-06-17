@@ -1,0 +1,131 @@
+---
+title: "clustering_part2"
+author: "Tyler Hansen"
+date: "6/17/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r Libraries}
+library(tidyverse)
+library(pheatmap)
+library(viridis)
+set.seed(123)
+library(extrafont)
+loadfonts(device = "win")
+library(ggsci)
+library(ChIPseeker)
+library(clusterProfiler)
+library("GenomicRanges")
+library(org.Hs.eg.db)
+library(TxDb.Hsapiens.UCSC.hg38.knownGene)
+library(ReactomePA)
+```
+
+```{r Clustering by TF Binding}
+#Read in results
+active_df <- read_tsv("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/multiomic/Cluster/TF-binding-scores_active_rawCounts.tsv") %>% mutate_all(~replace(., is.nan(.), 0)) %>% unite(pos, `#'chr'`, `'start'`,`'end'`,  sep = ".") %>% column_to_rownames(var = "pos") %>% dplyr::select(-"'TP53'", -"'TP73'", -"'ZBTB7A'", -"'ZBTB32'",-"'SP1'", -"'CTCF'", -"'NFYA'", -"'KLF3'", -"'XBP1'", -"'THAP11'", -"'YY1'", -"'PAX5'", -"'BCL6'", -"'Foxo1'", -"'SPI1'", -"'EBF1'", -"'IKZF1'", -"'TCF3'", -"'PRDM1'")
+
+active_df[active_df != 0] <- 1
+active_df <- active_df[rowSums(active_df) > 0,]
+
+heatmap <- pheatmap(active_df, show_rownames = FALSE, cluster_cols=TRUE, cluster_rows=TRUE, cellwidth = 20, cutree_rows = 6, display_numbers = FALSE, legend = FALSE, clustering_distance_rows = 'binary', clustering_distance_cols = 'binary')
+
+silent_df <- read_tsv("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/multiomic/Cluster/TF-binding-scores_silent_rawCounts.tsv") %>% mutate_all(~replace(., is.nan(.), 0)) %>% unite(pos, `#'chr'`, `'start'`,`'end'`,  sep = ".") %>% column_to_rownames(var = "pos") %>% dplyr::select(-"'TP53'", -"'TP73'", -"'XBP1'", -"'ZBTB32'",-"'IRF8'", -"'NFKB1'", -"'BACH2'", -"'JUNB'", -"'ELK1'", -"'THAP11'", -"'SPIB'", -"'PAX5'", -"'BCL6'", -"'Foxo1'", -"'SPI1'", -"'EBF1'", -"'IKZF1'", -"'TCF3'", -"'PRDM1'", -"'KLF3'",  -"'YY1'")
+
+silent_df[silent_df != 0] <- 1
+silent_df <- silent_df[rowSums(silent_df) > 0,]
+
+heatmap <- pheatmap(as.matrix(silent_df), show_rownames = FALSE, cluster_cols=TRUE, cluster_rows=TRUE, cellwidth = 20, cutree_rows = 4, display_numbers = FALSE, legend = FALSE, clustering_distance_rows = 'binary', clustering_distance_cols = 'binary')
+
+#Extract regions by cluster. Jun/Bach
+jun_bach_cluster <- cbind(active_df, cluster = cutree(heatmap$tree_row,k = 6)) %>% rownames_to_column(var = "pos") %>% separate(pos, sep = "[.]", into = c("chr", "start", "end")) %>% filter(cluster == 5) %>% select(chr, start, end)
+
+jun_bach_cluster$start <- as.numeric(jun_bach_cluster$start)
+jun_bach_cluster$end <- as.numeric(jun_bach_cluster$end)
+
+jun_bach_cluster_gRanges <- with(jun_bach_cluster, GRanges(chr, IRanges(start, end)))
+
+jun_bach <- annotatePeak(jun_bach_cluster_gRanges, tssRegion = c(-2000, 1000), TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", flankDistance = 100000, addFlankGeneInfo = TRUE)
+pathway <- enrichKEGG(as.data.frame(jun_bach)$geneId)
+
+dotplot(pathway)
+
+#Extract regions by cluster. IRF8
+irf_cluster <- cbind(active_df, cluster = cutree(heatmap$tree_row,k = 6)) %>% rownames_to_column(var = "pos") %>% separate(pos, sep = "[.]", into = c("chr", "start", "end")) %>% filter(cluster == 4) %>% dplyr::select(chr, start, end)
+
+irf_cluster$start <- as.numeric(irf_cluster$start)
+irf_cluster$end <- as.numeric(irf_cluster$end)
+
+irf_cluster_gRanges <- with(irf_cluster, GRanges(chr, IRanges(start, end)))
+
+irf <- annotatePeak(irf_cluster_gRanges, tssRegion = c(-2000, 1000), TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", flankDistance = 100000, addFlankGeneInfo = TRUE)
+irf_pathway <- enrichPathway(as.data.frame(irf)$geneId)
+
+dotplot(irf_pathway)
+
+#Extract regions by cluster. NFkB
+nfkb_cluster <- cbind(active_df, cluster = cutree(heatmap$tree_row,k = 6)) %>% rownames_to_column(var = "pos") %>% separate(pos, sep = "[.]", into = c("chr", "start", "end")) %>% filter(cluster == 2) %>% dplyr::select(chr, start, end)
+
+nfkb_cluster$start <- as.numeric(nfkb_cluster$start)
+nfkb_cluster$end <- as.numeric(nfkb_cluster$end)
+
+nfkb_cluster_gRanges <- with(nfkb_cluster, GRanges(chr, IRanges(start, end)))
+
+nfkb <- annotatePeak(nfkb_cluster_gRanges, tssRegion = c(-2000, 1000), TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", flankDistance = 100000, addFlankGeneInfo = TRUE)
+nfkb_pathway <- enrichPathway(as.data.frame(nfkb)$geneId)
+
+dotplot(nfkb_pathway)
+
+#Extract regions by cluster. ELK1
+elk1_cluster <- cbind(active_df, cluster = cutree(heatmap$tree_row,k = 6)) %>% rownames_to_column(var = "pos") %>% separate(pos, sep = "[.]", into = c("chr", "start", "end")) %>% filter(cluster == 1) %>% dplyr::select(chr, start, end)
+
+elk1_cluster$start <- as.numeric(elk1_cluster$start)
+elk1_cluster$end <- as.numeric(elk1_cluster$end)
+
+elk1_cluster_gRanges <- with(elk1_cluster, GRanges(chr, IRanges(start, end)))
+
+elk1 <- annotatePeak(elk1_cluster_gRanges, tssRegion = c(-2000, 1000), TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", flankDistance = 100000, addFlankGeneInfo = TRUE)
+elk1_pathway <- enrichPathway(as.data.frame(elk1)$geneId)
+
+dotplot(elk1_pathway)
+
+#Extract regions by cluster. SPIB
+spib_cluster <- cbind(active_df, cluster = cutree(heatmap$tree_row,k = 6)) %>% rownames_to_column(var = "pos") %>% separate(pos, sep = "[.]", into = c("chr", "start", "end")) %>% filter(cluster == 3) %>% dplyr::select(chr, start, end)
+
+spib_cluster$start <- as.numeric(spib_cluster$start)
+spib_cluster$end <- as.numeric(spib_cluster$end)
+
+spib_cluster_gRanges <- with(spib_cluster, GRanges(chr, IRanges(start, end)))
+
+spib <- annotatePeak(spib_cluster_gRanges, tssRegion = c(-2000, 1000), TxDb = TxDb.Hsapiens.UCSC.hg38.knownGene, annoDb = "org.Hs.eg.db", flankDistance = 100000, addFlankGeneInfo = TRUE)
+spib_pathway <- enrichPathway(as.data.frame(spib)$geneId)
+
+dotplot(spib_pathway)
+
+cluster_res <- clusterProfiler::compareCluster(list(`1`=as.data.frame(jun_bach)$geneId, `2`=as.data.frame(irf)$geneId, `3`=as.data.frame(spib)$geneId, `4`=as.data.frame(nfkb)$geneId, `5`=as.data.frame(elk1)$geneId), fun = "enrichPathway")
+p <- dotplot(cluster_res, showCategory = 2) + theme_bw() + theme(legend.position = "bottom")
+
+ggsave(p, filename = "results/multiomic/Cluster/reactome.pdf", device = cairo_pdf, width = 6, height = 4)
+
+res_df <- as.data.frame(cluster_res)
+
+filtered_df <- dplyr::filter(res_df, Description == c("Negative regulation of MAPK pathway"))
+filtered_df <- dplyr::filter(res_df, Description == c("NF-kB is activated and signals survival")) %>% bind_rows(filtered_df)
+filtered_df <- dplyr::filter(res_df, Description == "Translation") %>% bind_rows(filtered_df)
+filtered_df <- dplyr::filter(res_df, Description == "Interferon alpha/beta signaling") %>% bind_rows(filtered_df)
+filtered_df <- dplyr::filter(res_df, Description == "Signaling by Interleukins") %>% bind_rows(filtered_df)
+filtered_df <- dplyr::filter(res_df, Description == "rRNA processing") %>% bind_rows(filtered_df)
+
+p <- ggplot(filtered_df, aes(y=Description, x=-log10(p.adjust))) + 
+  geom_col(orientation = "y", aes(fill = Cluster)) + 
+  facet_grid(Cluster~., space = "free_y", scales = "free_y") + 
+  theme_classic(base_size = 10, base_family = "Arial") + 
+  scale_fill_brewer(palette = "Purples") +
+  theme(strip.text = element_blank(), axis.title.y = element_blank(), legend.position = "none")
+
+ggsave(p, filename = "results/multiomic/Cluster/reactome-bar.pdf", device = cairo_pdf, width = 4, height = 4)
+```

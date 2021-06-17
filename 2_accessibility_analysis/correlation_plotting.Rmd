@@ -1,0 +1,56 @@
+---
+title: "Untitled"
+author: "Tyler Hansen"
+date: "6/17/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, Libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(extrafont)
+loadfonts(device = "win")
+```
+
+```{r, Plot Correlation}
+#I made correlation plots with deeptools, but they don't look that great. I'll take the raw counts from that and make a ggplot here. 
+
+#read in results.
+tsv <- read_tsv(file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/reproducibility/ATAC-STARR+Buenrostro_reproducibility_merged-bams.tsv", col_names = c("Chr", "Start", "End", "ATAC-STARR", "Buenrostro"), skip = 1)
+
+#calculate scaling factors:
+AS_scale <- sum(tsv$`ATAC-STARR`) / 1e6
+buen_scale <- sum(tsv$Buenrostro) / 1e6
+
+#scale read counts by million counts. (cpm)
+tsv <- mutate(tsv, AS_cpm = `ATAC-STARR` / AS_scale) %>% mutate(buen_cpm = Buenrostro / buen_scale)
+
+#double check scaling, the sum of each cpm column should be 1e6:
+sum(tsv$AS_cpm) == 1e6
+sum(tsv$buen_cpm) == 1e6
+
+#log10 convert
+tsv <- mutate(tsv, AS_log = log10(1 + AS_cpm)) %>% mutate(buen_log = log10(1 + buen_cpm))
+
+#plot scatter:
+p <- ggplot(tsv, aes(x=AS_log, y=buen_log)) +
+  geom_bin2d(bins=150) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = bquote(~log[10]~"(1 + ATAC-STARR)"), y=bquote("-"~log[10]~"(1 + Buenrostro)")) +
+  scale_fill_viridis_c() +
+  scale_y_continuous(breaks = seq(0, 2.5, 0.5)) +
+  scale_x_continuous(breaks = seq(0, 2.5, 0.5)) +
+  theme_bw(base_size = 8, base_family = "Arial") +
+  theme(legend.position = "none") +
+  coord_cartesian(xlim = c(0,2.5), ylim = c(0,2.5))
+
+#Save plot
+ggsave(p, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/accessibility/ATAC-STARR_vs_Buenrostro/correlation_scatter.pdf", device = cairo_pdf, width = 3, height = 3)
+
+#calculate correlation
+cor.test(tsv$AS_cpm, tsv$buen_cpm, method = "spearman")
+cor.test(tsv$AS_cpm, tsv$buen_cpm, method = "pearson")
+```

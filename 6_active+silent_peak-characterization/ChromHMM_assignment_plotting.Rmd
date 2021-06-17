@@ -1,0 +1,141 @@
+---
+title: "ChromHMM Assignment"
+author: "Tyler Hansen"
+date: "5/4/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, Libraries, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(extrafont)
+loadfonts(device = "win")
+library(ggrepel)
+library(pals)
+library(RColorBrewer)
+```
+
+```{r Active regions}
+#Make pie chart of all OCRs based on accessibility and activity:
+#Read_tsv
+tsv <- read_tsv(file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ChromHMM_assignment/GM12878inGM12878_active_0.1padj_50-bin_ChromHMM.bed", col_names = c("Chr", "Start", "End", "Chrom_HMM_State"))
+
+tsv_tally <- group_by(tsv, Chrom_HMM_State) %>% tally()
+
+tsv_tally$Chrom_HMM_State <- factor(tsv_tally$Chrom_HMM_State, levels = c("1_TssA", "2_TssFlnk", "3_TssFlnkU", "4_TssFlnkD", "5_Tx", "6_TxWk", "7_EnhG1", "8_EnhG2", "9_EnhA1", "10_EnhA2", "11_EnhWk", "12_ZNF/Rpts", "13_Het", "14_TssBiv", "15_EnhBiv", "16_ReprPC", "17_ReprPCWk", "18_Quies"))
+
+nb.cols <- 18
+mycolors <- colorRampPalette(brewer.pal(10, "Paired"))(nb.cols)
+
+plotPie <- function(dfTable){
+  ggplot(dfTable, aes(x = "", y = n, fill = Chrom_HMM_State)) + # We will change coordinates to polar two lines down. No x needed
+    geom_bar(width = 1, stat = "identity", color = "white", size = 0.25) +
+    coord_polar("y", start = 0) +
+    #geom_text_repel(aes(label = paste0(round(n / sum(n) * 100, 1), "%")), position = position_stack(vjust = 0.5), size = 4, family="Arial") + # Label w/ %'s
+    scale_fill_manual(values = mycolors) +
+    ggtitle("Active Peaks") +
+    labs(fill="ChromHMM State") +
+    theme_void(base_family = "Arial", base_size = 6) +
+    theme(legend.position = "bottom", legend.key.size = unit(0.15, "inches"), plot.title = element_text(hjust = 0.5, face = "bold", size = 12)) 
+}
+
+#Execute function.
+pie <-plotPie(tsv_tally)
+pie
+
+ggsave(pie, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ChromHMM_assignment/piechart_active.pdf", device = cairo_pdf, width=4, height=3)
+```
+
+```{r Silent regions}
+#Make pie chart of all OCRs based on accessibility and activity:
+#Read_tsv
+tsv <- read_tsv(file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ChromHMM_assignment/GM12878inGM12878_silent_0.1padj_50-bin_ChromHMM.bed", col_names = c("Chr", "Start", "End", "Chrom_HMM_State"))
+
+tsv_tally <- group_by(tsv, Chrom_HMM_State) %>% tally()
+
+tsv_tally$Chrom_HMM_State <- factor(tsv_tally$Chrom_HMM_State, levels = c("1_TssA", "2_TssFlnk", "3_TssFlnkU", "4_TssFlnkD", "5_Tx", "6_TxWk", "7_EnhG1", "8_EnhG2", "9_EnhA1", "10_EnhA2", "11_EnhWk", "12_ZNF/Rpts", "13_Het", "14_TssBiv", "15_EnhBiv", "16_ReprPC", "17_ReprPCWk", "18_Quies"))
+
+nb.cols <- 18
+mycolors <- colorRampPalette(brewer.pal(10, "Paired"))(nb.cols)
+
+plotPie <- function(dfTable){
+  ggplot(dfTable, aes(x = "", y = n, fill = Chrom_HMM_State)) + # We will change coordinates to polar two lines down. No x needed
+    geom_bar(width = 1, stat = "identity", color = "white", size = 0.25) +
+    coord_polar("y", start = 0) +
+    #geom_text_repel(aes(label = paste0(round(n / sum(n) * 100, 1), "%")), position = position_stack(vjust = 0.5), size = 4, family="Arial") + # Label w/ %'s
+    scale_fill_manual(values = mycolors) +
+    ggtitle("Silent Peaks") +
+    labs(fill="ChromHMM State") +
+    theme_void(base_family = "Arial", base_size = 6) +
+    theme(legend.position = "bottom", legend.key.size = unit(0.15, "inches"), plot.title = element_text(hjust = 0.5, face = "bold", size = 12)) 
+}
+
+#Execute function.
+pie <-plotPie(tsv_tally)
+pie
+
+ggsave(pie, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ChromHMM_assignment/piechart_silent.pdf", device = cairo_pdf, width=4, height=3)
+```
+
+```{r OCRs}
+#Make pie chart of all OCRs based on accessibility and activity:
+#Read_tsv
+tsv <- read_tsv(file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ChromHMM_assignment/GM12878inGM12878_DNA_genrich_0.0001-qvalue_ChromHMM.bed", col_names = c("Chr", "Start", "End", "Chrom_HMM_State"))
+
+tsv_tally <- group_by(tsv, Chrom_HMM_State) %>% tally()
+
+tsv_tally$Chrom_HMM_State <- factor(tsv_tally$Chrom_HMM_State, levels = c("1_TssA", "2_TssFlnk", "3_TssFlnkU", "4_TssFlnkD", "5_Tx", "6_TxWk", "7_EnhG1", "8_EnhG2", "9_EnhA1", "10_EnhA2", "11_EnhWk", "12_ZNF/Rpts", "13_Het", "14_TssBiv", "15_EnhBiv", "16_ReprPC", "17_ReprPCWk", "18_Quies"))
+
+nb.cols <- 18
+mycolors <- colorRampPalette(brewer.pal(10, "Paired"))(nb.cols)
+
+plotPie <- function(dfTable){
+  ggplot(dfTable, aes(x = "", y = n, fill = Chrom_HMM_State)) + # We will change coordinates to polar two lines down. No x needed
+    geom_bar(width = 1, stat = "identity", color = "white", size = 0.25) +
+    coord_polar("y", start = 0) +
+    #geom_text_repel(aes(label = paste0(round(n / sum(n) * 100, 1), "%")), position = position_stack(vjust = 0.5), size = 4, family="Arial") + # Label w/ %'s
+    scale_fill_manual(values = mycolors) +
+    ggtitle("Open Chromatin Peaks") +
+    labs(fill="ChromHMM State") +
+    theme_void(base_family = "Arial", base_size = 6) +
+    theme(legend.position = "bottom", legend.key.size = unit(0.15, "inches"), plot.title = element_text(hjust = 0.5, face = "bold", size = 12)) 
+}
+
+#Execute function.
+pie <-plotPie(tsv_tally)
+pie
+
+ggsave(pie, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ChromHMM_assignment/piechart_OCRs.pdf", device = cairo_pdf, width=4, height=3)
+```
+
+```{r Bar Chart}
+#Read_tsvs
+active <- read_tsv(file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ChromHMM_assignment/GM12878inGM12878_active_0.1padj_50-bin_ChromHMM.bed", col_names = c("Chr", "Start", "End", "Chrom_HMM_State")) %>% mutate(Type="Active Peaks")
+silent <- read_tsv(file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ChromHMM_assignment/GM12878inGM12878_silent_0.1padj_50-bin_ChromHMM.bed", col_names = c("Chr", "Start", "End", "Chrom_HMM_State")) %>% mutate(Type="Silent Peaks")
+OCRs <- read_tsv(file = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ChromHMM_assignment/GM12878inGM12878_DNA_genrich_0.0001-qvalue_ChromHMM.bed", col_names = c("Chr", "Start", "End", "Chrom_HMM_State")) %>% mutate(Type="Open Chromatin Regions")
+
+tsv <- bind_rows(active, silent, OCRs)
+tsv$Type <- factor(tsv$Type, levels = c("Silent Peaks", "Active Peaks", "Open Chromatin Regions"))
+
+tsv_tally <- group_by(tsv, Chrom_HMM_State, Type) %>% tally()
+
+tsv_tally$Chrom_HMM_State <- factor(tsv_tally$Chrom_HMM_State, levels = c("1_TssA", "2_TssFlnk", "3_TssFlnkU", "4_TssFlnkD", "5_Tx", "6_TxWk", "7_EnhG1", "8_EnhG2", "9_EnhA1", "10_EnhA2", "11_EnhWk", "12_ZNF/Rpts", "13_Het", "14_TssBiv", "15_EnhBiv", "16_ReprPC", "17_ReprPCWk", "18_Quies"))
+
+nb.cols <- 18
+mycolors <- colorRampPalette(brewer.pal(10, "Paired"))(nb.cols)
+
+bar <- ggplot(tsv_tally, aes(y = Type, x = n, fill = Chrom_HMM_State)) + # We will change coordinates to polar two lines down. No x needed
+  geom_bar(width = 1, stat = "identity", color = "white", size = 0.1, position = "fill") +
+  scale_fill_manual(values = mycolors) +
+  ggtitle("") +
+  labs(fill="ChromHMM State") +
+  theme_bw(base_family = "Arial", base_size = 8) +
+  theme(legend.position = "bottom", legend.key.size = unit(0.15, "inches"), plot.title = element_text(hjust = 0.5, face = "bold", size = 12), axis.title = element_blank()) 
+
+ggsave(bar, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/ChromHMM_assignment/barchart.pdf", device = cairo_pdf, width=4, height=3)
+```

@@ -1,0 +1,29 @@
+#!/bin/bash
+#SBATCH --mail-user=tyler.j.hansen@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --time=00-04:00:00
+#SBATCH --mem=8G
+############################
+# Tyler Hansen 12-7-2020
+# This is a MASTER script for performing TF motif enrichment anlayis using the HOMER software package.
+# Syntax: findMotifsGenome.pl <pos file> <genome> <output directory> [additional options]
+# The genome can either be a HOMER configured genome or a fasta file. 
+# There are four key options set here. 
+#   1) -size given is NOT the default but is what I most often use. This states that Homer should use the regions as given and not extend them, which you would do if you were doing histone ChIP-seq. 
+#   2) -nomotif is NOT set here but can be included if you want to omit de novo motif analysis, which takes a bulk of the time. 
+#   3) -p is the number of processors. This takes about a day on 1 core, so I generally submit with 4 cores each.
+#   4) -bg is not set here. BG coresponds to the background file that HOMER uses to measure enrichment against. The default is to randomly select genomic positions.  
+#   5) -dumpFasta is not set here either. This will dump fasta files for target and background sequences in order for use with other programs. 
+############################
+
+#Variables
+OUT_DIR='/data/hodges_lab/ATAC-STARR_V2/results/accessibility/Motif_Analysis'
+
+INPUT_FILE='/data/hodges_lab/ATAC-STARR_V2/data/accessibility/genrich_ATAC-like_peaks/GM12878inGM12878_DNA_genrich_0.0001-qvalue.narrowPeak'
+findMotifsGenome.pl $INPUT_FILE hg38 ${OUT_DIR}/GM12878inGM12878_DNA_genrich_0.0001-qvalue -size given -p 4 
+
+INPUT_FILE='/data/hodges_lab/public_data/GM12878/obtained_as_raw_files/ATAC_GM12878_2013-buenrostro/data/genrich_peaks/GM12878_ATAC-seq_buenrostro_genrich_0.0001-qvalue.narrowPeak'
+findMotifsGenome.pl $INPUT_FILE hg38 ${OUT_DIR}/GM12878_ATAC-seq_buenrostro_genrich_0.0001-qvalue -size given -p 4

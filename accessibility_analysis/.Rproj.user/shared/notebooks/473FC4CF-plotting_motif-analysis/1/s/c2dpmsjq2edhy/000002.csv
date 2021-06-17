@@ -1,6 +1,0 @@
-"0","#Read in motif results txt files"
-"0","setwd(""C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/Motif_Analysis/"")"
-"0",""
-"0","GM_specific_5 <- read_tsv(""GM12878-specific_OCRs_L2FC-5/knownResults.txt"", col_names=c(""MotifName"",""Consensus"",""p"",""logp"",""q"",""numTarget"", ""percentTarget"",""numBackground"",""percentBackground""))"
-"2","Error: 'GM12878-specific_OCRs_L2FC-5/knownResults.txt' does not exist in current working directory ('C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/Motif_Analysis').
-"
