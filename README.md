@@ -130,3 +130,14 @@ motif-enrichment.slrm
 motif-enrichment_plotting.Rmd
 ```
 ## Multiomic Analysis
+We integrated accessibility, TF footprinting, and regulatory activity obtained from ATAC-STARR.
+
+To visualize signal and regions at the GPR132 locus, we used the Sushi package in R. 
+```
+visualize_multiomics_GPR132.Rmd
+```
+We clustered active regions based on the presence and absence of TF footprints. We used the following scripts:
+```
+clustering_part1.slrm
+clustering_part2.Rmd
+```
