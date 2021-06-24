@@ -7,7 +7,7 @@ In this repository, we share our code for all steps of ATAC-STARR-seq data analy
 ![github_figure_flowchart](https://user-images.githubusercontent.com/61889919/122470432-ac1a4400-cf83-11eb-8207-a6e3c1428e56.png)
 
 
-The scripts used at each step are detailed in the sections below. Every script in this repository is either a slurm script or an R markdown. Slurm scripts are speciallized bash scripts used to submit jobs to the Vanderbilt computer cluster, ACCRE, which is uses the CentOS operating system and the SLURM scheduler. I realize many users may not need this detail, but I left it in because it helps describe the resoruces required to run each script. To convert the slurm scripts into bash scripts, just remove the ##SBATCH lines. 
+The scripts used at each step are detailed in the sections below. Every script in this repository is either a slurm script or an R markdown. Slurm scripts are speciallized bash scripts used to submit jobs to the Vanderbilt computer cluster, ACCRE, which is uses the CentOS operating system and the SLURM scheduler. I realize many users may not need this detail, but I left it in because it helps describe the resources required to run each script. To convert the slurm scripts into bash scripts, just remove the ##SBATCH lines. 
 
 ## Software
 ATAC-STARR-seq uses the following publicly available software packages: 
@@ -50,7 +50,7 @@ complexity+InsertSize.slrm
 complexity+InsertSize.Rmd
 ```
 ## Accessibility Analysis
-The inserts of the ATAC-STARR plasmid library are accessible chromatin. In ATAC-seq, these inserts are sent for sequencing rather than massively parallel cloning. Because we sequence the plasmid DNA sample in ATAC-STARR, we wondered if we could use this sequence file as a proxy for ATAC-seq. We turned to the buenrostro et al. 2013 dataset for benchmarking. Importantly, we downloaded their raw read files and processed using the same read processing methods above. We then called peaks and compared the peaksets using a variety of analyses. In brief, ATAC-STARR can be used to measure chromatin accessibility. 
+The inserts of the ATAC-STARR plasmid library are accessible chromatin. In ATAC-seq, these inserts are sent for sequencing rather than massively parallel cloning. Because we sequence the plasmid DNA sample in ATAC-STARR, we wondered if we could use this sequence file as a proxy for ATAC-seq. We turned to the Buenrostro et al. 2013 dataset for benchmarking. Importantly, we downloaded their raw read files and processed using the same read processing methods above. We then called peaks and compared the peaksets using a variety of analyses. In brief, ATAC-STARR can be used to measure chromatin accessibility. 
 
 #### Peak Calling: 
 While many peak calling methods exist for ATAC-seq, we prefer Genrich because it includes an ATAC-seq mode and handles biological replicates in a more streamlined fashion. Moreover, Generich is the recommended ATAC-seq peak caller by Harvard FAS Informatics (https://informatics.fas.harvard.edu/atac-seq-guidelines.html). Mapped read files without duplicates are used.  
