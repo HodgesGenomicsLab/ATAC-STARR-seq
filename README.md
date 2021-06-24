@@ -1,4 +1,4 @@
-# NAR_ATAC-STARR
+# ATAC-STARR Analysis 
 ATAC-STARR-seq is a massively parallel reporter assay (MPRA) that quantifies regulatory activity within accessible chromatin. In addition to regulatory activty, ATAC-STARR quantifies chromatin accessibility and transcription factor binding. In Hansen, T.J. & Hodges, E. Nucleic Acids Research. 2021, we present the ATAC-STARR method. This repository serves as a complement to that publication. 
 
 In this repository, we share our code for all steps of ATAC-STARR-seq data analysis. A flowchart of the analysis pipeline is below:
@@ -40,11 +40,53 @@ ChIPSeeker    1.20.0
 pheatmap      1.0.12 
 ```
 ## Read Processing and Quality Control
-
+For all of the ATAC-STARR analysis, raw reads are trimmed, assessed for quality, mapped to hg38, and filtered to remove regions mapping to ChrM and ENCODE blacklist regions. Reads with MAPQ scores less than 30 are also removed. For the accessibility analysis, we also generated deduplicated mapped read files. 
+```
+fastq_processing.slrm
+```
+We estimate library complexity using the preseq package and determine the distribution of insert size using Picard. These two processes are performed in the followiong set of scripts: 
+```
+complexity+InsertSize.slrm
+complexity+InsertSize.Rmd
+```
 ## Accessibility Analysis
+The inserts of the ATAC-STARR plasmid library are accessible chromatin. In ATAC-seq, these inserts are sent for sequencing rather than massively parallel cloning, which is how they were used in ATAC-STARR. Because we sequence the plasmid DNA sample in ATAC-STARR, we wondered if we could use this sequence file as a proxy for ATAC-seq. We turned to the buenrostro et al. 2013 dataset for benchmarking. Importantly, we downloaded their raw read files and processed using the same read processing methods above. We then called peaks and compared the peaksets using a variety of analyses. In brief, ATAC-STARR can be used to measure chromatin accessibility. 
 
+Peak Calling: While many peak calling methods exist for ATAC-seq, we prefer Genrich because it includes an ATAC-seq mode and handles biological replicates in a more streamlined fashion. Moreover, Generich is the recommended ATAC-seq peak caller by Harvard FAS Informatics (https://informatics.fas.harvard.edu/atac-seq-guidelines.html). Mapped read files without duplicates are used.  
+```
+genrich.slrm
+```
+Calculate peak set overlap:
+```
+jaccard.slrm
+euler-plot.Rmd
+```
+Correlation between experiments:
+```
+correlation.slrm
+correlation_plotting.Rmd
+```
+Motif enrichment analysis:
+```
+motif-enrichment.slrm
+motif-enrichment_plotting.Rmd
+```
+Signal track visualization:
+```
+generate-bigwigs.slrm
+visualize_bigwigs_Sushi.Rmd
+```
+Calculate FRiP scores:
+```
+calculate_FRiP_score.slrm
+calculate_FRiP_score_plotting.Rmd
+```
 ## TF Footprinting
-
+TF footprinting is an established computational method to identify TF footprints from ATAC-seq or DNase-seq data. We performed footprinting on the same ATAC-STARR plasmid DNA sample used in the accessibility analysis above using the TOBIAS software package. 
+```
+footprinting.slrm
+footprinting_heatmap.slrm
+```
 ## Activity Peak Calling (Sliding Window)
 
 ## Activity Peak Calling (Other)
