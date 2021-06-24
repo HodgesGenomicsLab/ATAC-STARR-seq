@@ -52,31 +52,32 @@ complexity+InsertSize.Rmd
 ## Accessibility Analysis
 The inserts of the ATAC-STARR plasmid library are accessible chromatin. In ATAC-seq, these inserts are sent for sequencing rather than massively parallel cloning, which is how they were used in ATAC-STARR. Because we sequence the plasmid DNA sample in ATAC-STARR, we wondered if we could use this sequence file as a proxy for ATAC-seq. We turned to the buenrostro et al. 2013 dataset for benchmarking. Importantly, we downloaded their raw read files and processed using the same read processing methods above. We then called peaks and compared the peaksets using a variety of analyses. In brief, ATAC-STARR can be used to measure chromatin accessibility. 
 
-Peak Calling: While many peak calling methods exist for ATAC-seq, we prefer Genrich because it includes an ATAC-seq mode and handles biological replicates in a more streamlined fashion. Moreover, Generich is the recommended ATAC-seq peak caller by Harvard FAS Informatics (https://informatics.fas.harvard.edu/atac-seq-guidelines.html). Mapped read files without duplicates are used.  
+#### Peak Calling: 
+While many peak calling methods exist for ATAC-seq, we prefer Genrich because it includes an ATAC-seq mode and handles biological replicates in a more streamlined fashion. Moreover, Generich is the recommended ATAC-seq peak caller by Harvard FAS Informatics (https://informatics.fas.harvard.edu/atac-seq-guidelines.html). Mapped read files without duplicates are used.  
 ```
 genrich.slrm
 ```
-Calculate peak set overlap:
+#### Calculate peak set overlap:
 ```
 jaccard.slrm
 euler-plot.Rmd
 ```
-Correlation between experiments:
+#### Correlation between experiments:
 ```
 correlation.slrm
 correlation_plotting.Rmd
 ```
-Motif enrichment analysis:
+#### Motif enrichment analysis:
 ```
 motif-enrichment.slrm
 motif-enrichment_plotting.Rmd
 ```
-Signal track visualization:
+#### Signal track visualization:
 ```
 generate-bigwigs.slrm
 visualize_bigwigs_Sushi.Rmd
 ```
-Calculate FRiP scores:
+#### Calculate FRiP scores:
 ```
 calculate_FRiP_score.slrm
 calculate_FRiP_score_plotting.Rmd
@@ -106,25 +107,30 @@ featureCounts_fragmentGroups.slrm
 call-peaks_DESeq2.Rmd
 remove_redundancy.slrm
 ```
+We compared the two methods by calculating FRiP and region count with the following scripts:
+```
+compare_peak-callers_FRiP_scores.slrm
+compare_peak-callers_plotting.Rmd
+```
 ## Active and Silent Region Characterization
 We performed the following analyses to characterize our active and silent peaksets:
 
-Peak size distribution:
+#### Peak size distribution:
 ```
 size_distribution.Rmd
 ```
-Annotation and ChromHMM assignment:
+#### Annotation and ChromHMM assignment:
 ```
 annotation.Rmd
 ChromHMM_assignment.slrm
 ChromHMM_assignment_plotting.Rmd
 ```
-Heatmaps of activity and ENCODE signal:
+#### Heatmaps of activity and ENCODE signal:
 ```
 generate_ATAC-STARR-activity_bigwig.slrm
 generate_signal_heatmap.slrm
 ```
-Motif enrichment analysis:
+#### Motif enrichment analysis:
 ```
 motif-enrichment.slrm
 motif-enrichment_plotting.Rmd
