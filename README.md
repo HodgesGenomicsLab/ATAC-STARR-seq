@@ -91,7 +91,7 @@ footprinting_heatmap.slrm
 ## Activity Peak Calling
 We called active and silent peaks using two approaches: the "sliding windows" method and the "fragment groups" method. We suggest using the "sliding windows" method for ATAC-STARR analysis; however, scripts for both approaches are listed below. Both methods use DESeq2 to call peaks but differ in how they define input regions. In the the "sliding window" approach, 50bp sliding bins are created at a 10bp step size within each accessiblilty peak. On the other hand, the "fragment groups" method creates regions by combining paired-end sequence fragments that overlap by 75%. The fragment groups approach follows the strategy used in HiDRA (Wang et al. 2018). Scripts for both approaches are provided below. 
 
-For both methods, peaks are called in the following manner: 1) a set of genomic regions is defined, 2) overlapping RNA and DNA reads are assigned to those regions, and 3) DESeq2 identifies regions where the RNA count is statistically different from the DNA count at a false-discovery rate of ≤ 0.1. 
+For both methods, active and silent peaks are called in the following manner: 1) a set of genomic regions is defined, 2) overlapping RNA and DNA reads are assigned to those regions, and 3) DESeq2 identifies regions where the RNA count is statistically different from the DNA count at a false-discovery rate of ≤ 0.1. Importnatnyl, the mapped read files used in active and silent peak calling contain duplicates. This is contrary to what was done in the accessiblity peak calling step above. 
 
 #### Sliding Windows
 ```
