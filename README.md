@@ -107,6 +107,26 @@ call-peaks_DESeq2.Rmd
 remove_redundancy.slrm
 ```
 ## Active and Silent Region Characterization
+We performed the following analyses to characterize our active and silent peaksets:
 
-
+Peak size distribution:
+```
+size_distribution.Rmd
+```
+Annotation and ChromHMM assignment:
+```
+annotation.Rmd
+ChromHMM_assignment.slrm
+ChromHMM_assignment_plotting.Rmd
+```
+Heatmaps of activity and ENCODE signal:
+```
+generate_ATAC-STARR-activity_bigwig.slrm
+generate_signal_heatmap.slrm
+```
+Motif enrichment analysis:
+```
+motif-enrichment.slrm
+motif-enrichment_plotting.Rmd
+```
 ## Multiomic Analysis
