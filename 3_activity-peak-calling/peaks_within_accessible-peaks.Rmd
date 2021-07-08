@@ -1,0 +1,44 @@
+---
+title: "Proportion of Accessible Peaks with an active or silent peak within them"
+author: "Tyler Hansen"
+date: "6/25/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(extrafont)
+loadfonts(device="win")
+#Pie Chart
+plotPie <- function(dfTable){
+  ggplot(dfTable, aes(x = "", y = value, fill = Group)) + # We will change coordinates to polar two lines down. No x needed
+    geom_bar(width = 1, stat = "identity", color = "white", size=0.25) + # Pie chart based off bar base 
+    coord_polar("y", start = 0) +
+    geom_text(aes(label = paste0(round(value / sum(value) * 100, 1), "%")), position = position_stack(vjust = 0.5), size = 3, family="Arial") + # Label w/ %'s
+    scale_fill_manual(values=c("steelblue","firebrick","darkorchid","gray")) +
+    theme_void(base_family = "Arial", base_size = 8) +
+    labs(fill = "Accessible peak\ncontains:") +
+    theme()
+}
+#make df with groups and values to plot. 
+df <- data.frame(
+  Group = c("Active only\n(9,276)","Silent only\n(9,453)","Active & Silent\n(2,362)", "No overlap\n(48,472)"),
+  value = c(11638-2362,11815-2362,2362,48472)
+)
+
+#make group factored and order for plotting. 
+df$Group <- factor(df$Group, levels = c("Active only\n(9,276)","Silent only\n(9,453)","Active & Silent\n(2,362)", "No overlap\n(48,472)"))
+
+#Execute function.
+pie <-plotPie(df)
+
+ggsave(pie, filename = "C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/results/activity/GM12878inGM12878_piechart_accessible-regions.pdf", device = cairo_pdf, width=4, height=2.5)
+
+```
+

@@ -1,0 +1,6 @@
+#This is a text file of the code used to generate the numbers used for the pie chart of accesible peaks with active, silent, or both within them. 
+#Figure 4E piechart 
+ 
+bedtools intersect -u -a accessibility/genrich_ATAC-like_peaks/GM12878inGM12878_DNA_genrich_0.0001-qvalue.narrowPeak -b activity/individual/DESeq2_results/bin-method/GM12878inGM12878_active_0.1padj_50-bin.merged.bed | wc -l
+bedtools intersect -u -a accessibility/genrich_ATAC-like_peaks/GM12878inGM12878_DNA_genrich_0.0001-qvalue.narrowPeak -b activity/individual/DESeq2_results/bin-method/GM12878inGM12878_silent_0.1padj_50-bin.merged.bed | wc -l
+bedtools intersect -u -a accessibility/genrich_ATAC-like_peaks/GM12878inGM12878_DNA_genrich_0.0001-qvalue.narrowPeak -b activity/individual/DESeq2_results/bin-method/GM12878inGM12878_active_0.1padj_50-bin.merged.bed | bedtools intersect -u -a - -b activity/individual/DESeq2_results/bin-method/GM12878inGM12878_silent_0.1padj_50-bin.merged.bed | wc -l

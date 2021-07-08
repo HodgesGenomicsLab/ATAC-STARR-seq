@@ -36,9 +36,9 @@ ATAC_signal <- read.delim("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab
 
 ATAC_peaks <- read.delim("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/accessibility/genrich_ATAC-like_peaks/GM12878inGM12878_DNA_genrich_0.0001-qvalue.narrowPeak", header = FALSE)
 
-SPIB_footprints <- read.delim("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/accessibility/footprinting/SPIB_MA0081.2_GM12878inGM12878_DNA_bound.bed", header = FALSE)
+SPI1_footprints <- read.delim("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/accessibility/footprinting/SPI1_MA0080.5_GM12878inGM12878_DNA_bound.bed", header = FALSE)
 
-IRF8_footprints <- read.delim("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/accessibility/footprinting/IRF8_MA0652.1_GM12878inGM12878_DNA_bound.bed", header = FALSE)
+JUNB_footprints <- read.delim("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/accessibility/footprinting/JUNB_MA0490.2_GM12878inGM12878_DNA_bound.bed", header = FALSE)
 
 CTCF_footprints <- read.delim("C:/Users/tyler/Dropbox (VU Basic Sciences)/Hodges Lab/Results and Data/Bioinformatics/ATAC-STARR_analysis/3_Accre_Local/ATAC-STARR/data/accessibility/footprinting/CTCF_MA0139.1_GM12878inGM12878_DNA_bound.bed", header = FALSE)
 
@@ -66,30 +66,30 @@ layout(matrix(c(1,1,
                 7,8), ncol = 2, byrow = TRUE))
 par(mar=c(3,4,1,1))
 
-plotGenes(geneinfo = RefSeq_genes,chrom = chrom,chromstart = chromstart,chromend = chromend, types = "exon", plotgenetype="arrow", bentline=FALSE, maxrows=1, bheight=0.15, labeloffset=.4, fontsize=2, arrowlength= 0.025, labeltext=TRUE, col = "black")
+plotGenes(geneinfo = RefSeq_genes,chrom = chrom,chromstart = chromstart,chromend = chromend, types = "exon", maxrows=1, bheight=0.15, labeloffset=.4, fontsize=2, labeltext=TRUE, col = "black")
 
 plotBedgraph(ATAC_signal, chrom,chromstart,chromend,colorbycol= SushiColors(5))
 axis(side=2,las=2,tcl=.2)
 labelgenome(chrom,chromstart,chromend,side=1,n=3,scale="Kb")
 
 zoomregion1 = c(105045000,105049500)
-zoomregion2 = c(105061000,105068000)
+zoomregion2 = c(105061000,105067000)
 
 zoomsregion(zoomregion1,extend=c(0.01,0.13),wideextend=0.05,
 offsets=c(0,0.535))
 zoomsregion(zoomregion2,extend=c(0.01,0.13),wideextend=0.05,
 offsets=c(0.535,0))
 
-plotBed(beddata = CTCF_footprints, chrom,chromstart=zoomregion1[1],chromend=zoomregion1[2], color = "black", row = 'supplied')
+plotBed(beddata = CTCF_footprints, chrom,chromstart=zoomregion1[1],chromend=zoomregion1[2], color = "darkorchid", row = 'supplied')
 zoombox(passthrough=TRUE)
 
-plotBed(beddata = SPIB_footprints, chrom,chromstart=zoomregion2[1],chromend=zoomregion2[2], color = "black", row = 'supplied')
+plotBed(beddata = SPI1_footprints, chrom,chromstart=zoomregion2[1],chromend=zoomregion2[2], color = "darkorchid", row = 'supplied')
 zoombox(passthrough=TRUE)
 
-plotBed(beddata = Silent_Peaks, chrom,chromstart=zoomregion1[1],chromend=zoomregion1[2], color = "red", row = 'supplied')
+plotBed(beddata = Silent_Peaks, chrom,chromstart=zoomregion1[1],chromend=zoomregion1[2], color = "red2", row = 'supplied')
 zoombox(passthrough=TRUE)
 
-plotBed(beddata = Activity_Peaks, chrom,chromstart=zoomregion2[1],chromend=zoomregion2[2], color = "blue", row = 'supplied')
+plotBed(beddata = Activity_Peaks, chrom,chromstart=zoomregion2[1],chromend=zoomregion2[2], color = "blue2", row = 'supplied')
 zoombox(passthrough=TRUE)
 
 plotBedgraph(ATAC_signal,chrom,chromstart=zoomregion1[1],
