@@ -3,9 +3,7 @@ ATAC-STARR-seq is a massively parallel reporter assay (MPRA) that quantifies reg
 
 In this repository, we share our code for all steps of ATAC-STARR-seq data analysis. A flowchart of the analysis pipeline is below:
 
-
-![github_figure_flowchart](https://user-images.githubusercontent.com/61889919/122470432-ac1a4400-cf83-11eb-8207-a6e3c1428e56.png)
-
+![github_figure_flowchart](https://user-images.githubusercontent.com/61889919/124975325-879a1080-dff3-11eb-9c8f-fcd3b397dd45.png)
 
 The scripts used at each step are detailed in the sections below. Most scripts in this repository are either a slurm script or an R markdown. Slurm scripts are speciallized bash scripts used to submit jobs to the Vanderbilt computer cluster, ACCRE, which is uses the CentOS operating system and the SLURM scheduler. I realize many users may not need this detail, but I left it in because it helps describe the resources required to run each script. To convert the slurm scripts into bash scripts, just remove the ##SBATCH lines. 
 
@@ -46,7 +44,7 @@ For all of the ATAC-STARR analysis, raw reads are trimmed, assessed for quality,
 ```
 fastq_processing.slrm
 ```
-We estimate library complexity using the preseq package and determine the distribution of insert size using Picard. (Supplementary Figure 1A, Supplementary Figure 2B,C)
+We estimate library complexity using the preseq package and determine the distribution of insert size using Picard: (Supplementary Figure 1A, Supplementary Figure 2B,C)
 ```
 complexity+InsertSize.slrm
 complexity+InsertSize.Rmd
@@ -129,8 +127,8 @@ generate_signal_heatmap.slrm
 motif-enrichment.slrm
 motif-enrichment_plotting.Rmd
 ```
-## TF Footprinting: (Figure 5A-C)
-TF footprinting is an established method to identify TF footprints from an ATAC-seq or DNase-seq dataset. We performed footprinting on the same ATAC-STARR plasmid DNA sample used in the accessibility analysis above using the TOBIAS software package. 
+## TF Footprinting 
+TF footprinting is an established method to identify TF footprints from an ATAC-seq or DNase-seq dataset. We performed footprinting on the same ATAC-STARR plasmid DNA sample used in the accessibility analysis above using the TOBIAS software package: (Figure 5A-C)
 ```
 footprinting.slrm
 footprinting_heatmap.slrm
