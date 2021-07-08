@@ -55,7 +55,7 @@ The inserts of the ATAC-STARR plasmid library are accessible chromatin. In ATAC-
 #### Peak Calling: 
 While many peak calling methods exist for ATAC-seq, we prefer Genrich because it includes an ATAC-seq mode and handles biological replicates in a more streamlined fashion. Moreover, Generich is the recommended ATAC-seq peak caller by Harvard FAS Informatics (https://informatics.fas.harvard.edu/atac-seq-guidelines.html). Mapped read files without duplicates are used.  
 ```
-genrich.slrm
+call-peaks_genrich.slrm
 ```
 #### Calculate peak set overlap: (Figure 2A)
 ```
@@ -86,7 +86,7 @@ We called active and silent regions using two approaches: the "sliding windows" 
 
 For both methods, active and silent regions are called in the following manner: 1) a set of genomic regions is defined, 2) overlapping RNA and DNA reads are assigned to those regions, and 3) DESeq2 identifies regions where the RNA count is statistically different from the DNA count at a false-discovery rate of ≤ 0.1. Importantly, the mapped read files used in active and silent region calling contain duplicates. This is contrary to what was done in the accessiblity peak calling step above. 
 
-#### Sliding Windows: (Figure 3B-D, Supplementary Figure 3C)
+#### Sliding Window: (Figure 3B-D, Supplementary Figure 3C)
 ```
 make-bins+counts-matrix.slrm
 call-peaks_DESeq2.Rmd
