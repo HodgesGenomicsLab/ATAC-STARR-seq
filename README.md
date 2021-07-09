@@ -24,8 +24,6 @@ BEDtools      2.28.0
 deepTools     3.3.0
 HOMER         4.10
 TOBIAS        0.12.7
-MACS2         2.1.2
-CRADLE        
 bedops        2.4.28
 Subread       2.0.0
 ```
