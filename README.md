@@ -5,9 +5,7 @@ In this repository, we share our code for all steps of ATAC-STARR-seq data analy
 
 ![github_figure_flowchart](https://user-images.githubusercontent.com/61889919/124975325-879a1080-dff3-11eb-9c8f-fcd3b397dd45.png)
 
-The scripts used at each step are detailed in the sections below. Most scripts in this repository are either a slurm script or an R markdown. Slurm scripts are speciallized bash scripts used to submit jobs to the Vanderbilt computer cluster, ACCRE, which is uses the CentOS operating system and the SLURM scheduler. I realize many users may not need this detail, but I left it in because it helps describe the resources required to run each script. To convert the slurm scripts into bash scripts, just remove the ##SBATCH lines. 
-
-Note: If a script generated a figure that was used in the manuscript, the corresponding figure is mentioned. 
+The code used at each step is detailed as a Jupyter notebook in the sections below. We also supply some python scripts. 
 
 ## Software
 ATAC-STARR-seq uses the following publicly available software packages: 
