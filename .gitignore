@@ -2,3 +2,4 @@
 *.ai
 .Rproj.user
 .Rhistory
+.ipynb_checkpoints
