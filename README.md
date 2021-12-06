@@ -36,15 +36,18 @@ ChIPSeeker    1.20.0
 pheatmap      1.0.12 
 ```
 ## Read Processing and Quality Control
-For all of the ATAC-STARR analysis, raw reads are trimmed, assessed for quality, mapped to hg38, and filtered to remove regions mapping to ChrM and ENCODE blacklist regions. Reads with MAPQ scores less than 30 are also removed. For the accessibility analysis, we also generated deduplicated mapped read files. 
+We provide a jupyter notebook describing this portion of the analysis. 
 ```
-fastq_processing.slrm
+fastq-processing-and-QC.ipynb
 ```
-We estimate library complexity using the preseq package and determine the distribution of insert size using Picard: (Supplementary Figure 1A, Supplementary Figure 2B,C)
+In summary, raw reads are trimmed, assessed for quality, mapped to hg38, and filtered to remove regions mapping to ChrM and ENCODE blacklist regions. Reads with MAPQ scores less than 30 are also removed. For the accessibility analysis, we also generated deduplicated mapped read files. 
+
+To automate this step, I developed and utilitezed the following python script. 
 ```
-complexity+InsertSize.slrm
-complexity+InsertSize.Rmd
+fastq_processing.py
 ```
+We also estimate library complexity using the preseq package and determine the distribution of insert size using Picard: (Supplementary Figure 1A, Supplementary Figure 2B,C). 
+
 ## Accessibility Analysis
 The inserts of the ATAC-STARR plasmid library are accessible chromatin. In ATAC-seq, these inserts are sent for sequencing rather than massively parallel cloning. Because we sequence the plasmid DNA sample in ATAC-STARR, we wondered if we could use this sequence file as a proxy for ATAC-seq. We turned to the Buenrostro et al. 2013 dataset for benchmarking. Importantly, we downloaded their raw read files and processed using the same read processing methods above. We then called peaks and compared the peaksets using a variety of analyses. In brief, ATAC-STARR can be used to measure chromatin accessibility. 
 
