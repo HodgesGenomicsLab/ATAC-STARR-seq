@@ -1,0 +1,27 @@
+#!/bin/bash
+#SBATCH --mail-user=tyler.j.hansen@vanderbilt.edu
+#SBATCH --mail-type=ALL
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --time=24:00:00
+#SBATCH --mem=64G
+#######################################################
+#Tyler Hansen | 10.26.2021
+#This is an example slurm script for processing fastq files.
+#This script calls a companion python script. 
+
+#software
+module load Anaconda3
+source activate jupyter #see repo for required software and conda clone. 
+
+#Paths
+FASTQ_DIR='/data/hodges_lab/ATAC-STARR_B-cells/data/ATAC-STARR/fastq'
+BAM_DIR='/data/hodges_lab/ATAC-STARR_B-cells/data/ATAC-STARR/bams'
+QC_DIR='/data/hodges_lab/ATAC-STARR_B-cells/results/processing_results'
+
+#GGD3
+python3 fastq_processing.py -a ${FASTQ_DIR}/raw_reads/7106-TH-1_S1_L005_R1_001.fastq.gz \
+    -b ${FASTQ_DIR}/raw_reads/7106-TH-1_S1_L005_R2_001.fastq.gz \
+    -n GM12878inGM12878_DNA_Rep3 -e /home/hansetj1/hg38_encode_blacklist_ENCFF356LFX.bed -t ${FASTQ_DIR}/trimmed_reads \
+    -o $BAM_DIR -r $QC_DIR -g /data/hodges_lab/hg38_genome/bt2/hg38
