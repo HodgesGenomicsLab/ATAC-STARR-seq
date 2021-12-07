@@ -1,11 +1,7 @@
 # ATAC-STARR Analysis 
 ATAC-STARR-seq is a massively parallel reporter assay (MPRA) that quantifies regulatory activity within accessible chromatin. In addition to regulatory activty, ATAC-STARR quantifies chromatin accessibility and transcription factor binding. In Hansen, T.J. & Hodges, E. 2021, we present the ATAC-STARR method. This repository serves as a complement to that manuscript. 
 
-In this repository, we share our code for all steps of ATAC-STARR-seq data analysis. A flowchart of the analysis pipeline is below:
-
-![github_figure_flowchart](https://user-images.githubusercontent.com/61889919/124975325-879a1080-dff3-11eb-9c8f-fcd3b397dd45.png)
-
-The code used at each step is detailed as a Jupyter notebook in the sections below. We also supply some python scripts. 
+In this repository, we share our code for all steps of ATAC-STARR-seq data analysis. The code used at each step is detailed as a Jupyter notebook in the sections below. We also supply some python scripts. 
 
 ## Citation
 __Please cite our ATAC-STARR-seq method article:__
@@ -18,34 +14,30 @@ __This repository can also be cited:__
 Tyler J Hansen, & Emily Hodges. (2021). HodgesGenomicsLab/ATAC-STARR-seq: Simultaneous profiling of regulatory activity, chromatin accessibility, and transcription factor occupancy with ATAC-STARR-seq (V1.0.0). Zenodo. https://doi.org/10.5281/zenodo.5764666
 
 ## Software
-ATAC-STARR-seq uses the following publicly available software packages: 
 
-Command line:
+Below is a summary of most of the software packages used in ATAC-STARR-seq: 
 ```
-Trim Galore!  0.6.6 
-bowtie2       2.3.4.1
-SAMtools      1.9
-Picard        2.18.27
-Preseq        2.0.0
-Genrich       0.5
-BEDtools      2.28.0
-deepTools     3.3.0
-HOMER         4.10
-TOBIAS        0.12.7
-bedops        2.4.28
-Subread       2.0.0
+Command-line:       R-based:
+  Trim Galore!        R
+  bowtie2             tidyverse
+  SAMtools            Sushi  
+  Picard              DESeq2 
+  Preseq              ChIPSeeker
+  Genrich             pheatmap
+  BEDtools            ggsci
+  deepTools           ReactomePA
+  HOMER         
+  TOBIAS        
+  bedops        
+  Subread       
 ```
-RStudio:
+### Conda 
+We use conda to install our packages. We provide a text file of the software packages and their version number used in our conda environment as well as a yml file to clone our environment.
 ```
-R             3.6.1
-tidyverse     1.3.0
-Sushi         1.22.0
-DESeq2        1.24.0
-apeglm        1.6.0
-ChIPSeeker    1.20.0
-pheatmap      1.0.12 
+pkgs.txt
+conda_env.yml
 ```
-## Read Processing and Quality Control
+## Read Processing and Quality Control (1_read_processing)
 We provide a jupyter notebook describing this portion of the analysis. 
 ```
 fastq-processing-and-QC.ipynb
