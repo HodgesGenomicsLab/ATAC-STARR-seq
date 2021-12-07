@@ -1,3 +1,4 @@
+[![DOI](https://zenodo.org/badge/377602391.svg)](https://zenodo.org/badge/latestdoi/377602391)
 # ATAC-STARR Analysis 
 ATAC-STARR-seq is a massively parallel reporter assay (MPRA) that quantifies regulatory activity within accessible chromatin. In addition to regulatory activty, ATAC-STARR quantifies chromatin accessibility and transcription factor binding. In Hansen, T.J. & Hodges, E. 2021, we present the ATAC-STARR method. This repository serves as a complement to that manuscript. 
 
