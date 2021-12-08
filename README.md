@@ -5,8 +5,9 @@ In this repository, we share our code for all steps of ATAC-STARR-seq data analy
 
 ## Citation
 __Please cite our ATAC-STARR-seq method article:__  
-__This repository can also be cited:__  
-[![DOI](https://zenodo.org/badge/377602391.svg)](https://zenodo.org/badge/latestdoi/377602391)
+TBD - manuscript in revision  
+__This repository can also be cited:__    
+[![DOI](https://zenodo.org/badge/377602391.svg)](https://zenodo.org/badge/latestdoi/377602391)  
 Tyler J Hansen, & Emily Hodges. (2021). HodgesGenomicsLab/ATAC-STARR-seq: Simultaneous profiling of regulatory activity, chromatin accessibility, and transcription factor occupancy with ATAC-STARR-seq (V1.0.0). Zenodo. https://doi.org/10.5281/zenodo.5764666
 ## Software
 Below is a summary of most of the software packages used in ATAC-STARR-seq: 
