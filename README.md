@@ -90,6 +90,7 @@ usage: call_ATAC-STARR_regulatory-regions.py [-h] [-i CHRACC_PEAKS]
                                              [-d DNA_BAMS [DNA_BAMS ...]]
                                              [-r RNA_BAMS [RNA_BAMS ...]]
                                              [-o OUT_DIR] [-q FDR]
+                                             [-n THREADS]
 
 Call ATAC-STARR Regulatory Regions
 
@@ -107,6 +108,8 @@ optional arguments:
   -h, --help            show this help message and exit
   -q FDR, --fdr FDR     false discovery rate for differential analysis
                         (default: 0.05)
+  -n THREADS, --threads THREADS
+                        number of threads (default: 1)
 ```
 ## Accessibility Peak and Regulatory Region Characterization (3_peak-and-region_characterization)
 We compared our ChrAcc peaks to data from Buenrostro et al. 2013 (Figrue 2), which is detailed in the following notebook:
