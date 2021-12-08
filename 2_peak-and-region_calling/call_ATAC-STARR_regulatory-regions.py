@@ -74,6 +74,9 @@ required.add_argument("-o", "--out_dir", type=str,
 arg_parser.add_argument("-q", "--fdr", type=float, default=0.05,
                         help='false discovery rate for differential analysis (default: 0.05)')
 
+arg_parser.add_argument("-n", "--threads", type=int, default=1,
+                        help='number of threads (default: 1)')
+
 #order argument groups for help display 
 groups_order = {
     'positional arguments': 0,
@@ -92,6 +95,7 @@ DNA_FILES = args.DNA_bams
 RNA_FILES  = args.RNA_bams
 FDR = args.fdr
 OUT_DIR = args.out_dir
+NUM_THREADS = args.threads
 
 # print parameters for troubleshooting purposes
 print("PARAMETERS:")
@@ -100,14 +104,11 @@ print("DNA Files:", *DNA_FILES)
 print("RNA Files:", *RNA_FILES)
 print("Output Directory:", OUT_DIR)
 print("False-Discovery Rate:", FDR)
+print("Using", NUM_THREADS, "cores for processing")
 ###
 
 ###
 #   determine internal parameters
-
-# calculate the number of threads
-NUM_THREADS = int(os.getenv('SLURM_CPUS_PER_TASK', 1))
-print("Detected and using", NUM_THREADS, "cores for processing")
 
 # calculate the number of replicates and give errors if replicate number is differnt for RNA and DNA or if they are > 5 or < 2.
 if len(DNA_FILES) != len(RNA_FILES):
