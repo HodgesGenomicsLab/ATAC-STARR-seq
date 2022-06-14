@@ -9,9 +9,9 @@ TBD - manuscript in revision
 
 ### This repository can also be cited:    
 
-[![DOI](https://zenodo.org/badge/377602391.svg)](https://zenodo.org/badge/latestdoi/377602391)  
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6640476.svg)](https://doi.org/10.5281/zenodo.6640476)
 
-Tyler J Hansen, & Emily Hodges. (2021). HodgesGenomicsLab/ATAC-STARR-seq: Simultaneous profiling of regulatory activity, chromatin accessibility, and transcription factor occupancy with ATAC-STARR-seq (V1.0.0). Zenodo. https://doi.org/10.5281/zenodo.5764666
+Tyler J Hansen, & Emily Hodges. (2022). HodgesGenomicsLab/ATAC-STARR-seq: Identifying transcription factor-bound activators and silencers in the chromatin accessible human genome using ATAC-STARR-seq (V2.1.0). Zenodo. https://doi.org/10.5281/zenodo.6640476
 ## Software
 Below is a summary of most of the software packages used in ATAC-STARR-seq: 
 ```
