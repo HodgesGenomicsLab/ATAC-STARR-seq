@@ -38,7 +38,7 @@ Required Software downloaded via conda:
     trim-galore v0.6.7
     bowtie2 v2.3.5.1 (also need to downgrade tbb to v2020.2: conda install tbb=2020.2)
     samtools v1.13
-    picard v2.26.3 (jar file location:/path/to/venv/share/picard-2.26.3-0/picard.jar)
+    picard v2.26.3 (jar file location:/path/to/venv/share/picard-2.26.3-0/picard.jar) (works for most version numbers using this path: /path/to/venv/share/picard*/picard.jar)
 """
 
 ###
@@ -190,7 +190,7 @@ def filter_bam(bam_dir, name, blacklist_bed, threads, output_qc):
     subprocess.call(cmd, shell = True)
 
     #remove duplicates
-    cmd = f'java -jar /home/hansetj1/.conda/envs/jupyter/share/picard-2.26.3-0/picard.jar MarkDuplicates I={bam_dir}/{name}.filtered.pos-sorted.bam \
+    cmd = f'java -jar /home/hansetj1/.conda/envs/jupyter/share/picard*/picard.jar MarkDuplicates I={bam_dir}/{name}.filtered.pos-sorted.bam \
         O={bam_dir}/{name}.unique.unsorted.bam M={output_qc}/{name}_marked_dup_metrics-all.txt REMOVE_DUPLICATES=TRUE'
     subprocess.call(cmd, shell = True)
     
