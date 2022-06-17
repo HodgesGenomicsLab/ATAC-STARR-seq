@@ -9,9 +9,9 @@ TBD - manuscript in revision
 
 ### This repository can also be cited:    
 
-[![DOI](https://zenodo.org/badge/377602391.svg)](https://zenodo.org/badge/latestdoi/377602391)  
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6640476.svg)](https://doi.org/10.5281/zenodo.6640476)
 
-Tyler J Hansen, & Emily Hodges. (2021). HodgesGenomicsLab/ATAC-STARR-seq: Simultaneous profiling of regulatory activity, chromatin accessibility, and transcription factor occupancy with ATAC-STARR-seq (V1.0.0). Zenodo. https://doi.org/10.5281/zenodo.5764666
+Tyler J Hansen, & Emily Hodges. (2022). HodgesGenomicsLab/ATAC-STARR-seq: Identifying transcription factor-bound activators and silencers in the chromatin accessible human genome using ATAC-STARR-seq (V2.1.0). Zenodo. https://doi.org/10.5281/zenodo.6640476
 ## Software
 Below is a summary of most of the software packages used in ATAC-STARR-seq: 
 ```
@@ -116,9 +116,9 @@ optional arguments:
                         number of threads (default: 1)
 ```
 ## Accessibility Peak and Regulatory Region Characterization (3_peak-and-region_characterization)
-We compared our ChrAcc peaks to data from Buenrostro et al. 2013 (Figrue 2), which is detailed in the following notebook:
+We compared our ChrAcc peaks to data from Corces et al. (Figure 2), which is detailed in the following notebook:
 ```
-Compare_Buenrostro_and_ATAC-STARR.ipynb
+Compare_Corces_and_ATAC-STARR.ipynb
 ```
 We also characterized our active and silent regions in the following notebook (Figure 3):
 ```
@@ -135,7 +135,9 @@ We created a genome browser view using Sushi  (Figure 6). We also clustered acti
 multiomic_analysis.ipynb
 ```
 ## Supplementary Analyses (6_supplementary_analysis)
-We looked at orientation bias, HiDRA data, and performed a psuedo-replicate analysis. I wrapped these supplementary analyses up into one notebook:
+We looked at neutral regions, short and long fragnemts, orientation bias, HiDRA data, and performed a psuedo-replicate analysis. Analyses for these are in the notebooks below:
 ```
-Supplementary_Analysis.ipynb
+Additional_Supplementary_Analysis.ipynb
+Neutral Sequence Analysis.ipynb
+Short-vs-long_elements.ipynb
 ```
