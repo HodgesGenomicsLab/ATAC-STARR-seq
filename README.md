@@ -5,11 +5,10 @@ In this repository, we share our code for all steps of ATAC-STARR-seq data analy
 
 ## Citation
 ### Please cite our ATAC-STARR-seq method article:  
-TBD - manuscript in revision  
+
+Hansen TJ, Hodges E. ATAC-STARR-seq reveals transcription factor-bound activators and silencers across the chromatin accessible human genome. Genome Res. 2022 Jul 20;32(8):1529–41. https://doi.org/10.1101/gr.276766.122.
 
 ### This repository can also be cited:    
-
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6640476.svg)](https://doi.org/10.5281/zenodo.6640476)
 
 Tyler J Hansen, & Emily Hodges. (2022). HodgesGenomicsLab/ATAC-STARR-seq: Identifying transcription factor-bound activators and silencers in the chromatin accessible human genome using ATAC-STARR-seq (V2.1.0). Zenodo. https://doi.org/10.5281/zenodo.6640476
 ## Software
