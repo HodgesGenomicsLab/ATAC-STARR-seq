@@ -1,7 +1,7 @@
 """
 name    | Tyler Hansen
 created | 2021.09.28
-updated |
+updated | 2023.04.12
 
 Description: Active and silent region calling from ATAC-STARR data. This script consists of four major parts: 
     1) create sliding windows from a region file. 
@@ -23,7 +23,10 @@ Parameters:
 -d (--DNA_bams): reisolated plasmid DNA bam files. This script will detect and print the number of replicates provided in the analysis. 
 -r (--RNA_bams): reporter RNA bam files
 -o (--out_dir): output directory for all of the results 
+-bs (--bin_size): bin size of windows made
+-ss (--step_size): step size of sliding windows
 -q (--fdr): False Discovery Rate threshold to apply
+-cf (--count_filter): number of raw read counts per bin to filter against
 -h (--help): display this help
 
 Required Software downloaded via conda:
@@ -71,8 +74,17 @@ required.add_argument("-r", "--RNA_bams", type=str, nargs='+',
 required.add_argument("-o", "--out_dir", type=str,
                         help='output directory')
 
+arg_parser.add_argument("-bs", "--bin_size", type=int, default=50,
+                        help='bin size of windows made (default: 50)')
+
+arg_parser.add_argument("-ss", "--step_size", type=int, default=10,
+                        help='step size of sliding windows (default: 10) (turn off tiling by setting -ss = -bs)')
+
 arg_parser.add_argument("-q", "--fdr", type=float, default=0.05,
                         help='false discovery rate for differential analysis (default: 0.05)')
+
+arg_parser.add_argument("-cf", "--count_filter", type=int, default=0,
+                        help='number of raw read counts per bin to filter against (default: 0)')
 
 arg_parser.add_argument("-n", "--threads", type=int, default=1,
                         help='number of threads (default: 1)')
@@ -92,8 +104,11 @@ args = arg_parser.parse_args()
 # save parameters to variables
 ACC_PEAKS = args.ChrAcc_peaks
 DNA_FILES = args.DNA_bams
-RNA_FILES  = args.RNA_bams
+RNA_FILES = args.RNA_bams
+BIN_SIZE = args.bin_size
+STEP_SIZE = args.step_size
 FDR = args.fdr
+CF = args.count_filter
 OUT_DIR = args.out_dir
 NUM_THREADS = args.threads
 
@@ -103,7 +118,10 @@ print("ChrAcc Peaks File:", ACC_PEAKS)
 print("DNA Files:", *DNA_FILES)
 print("RNA Files:", *RNA_FILES)
 print("Output Directory:", OUT_DIR)
+print("Window Bin Size:", BIN_SIZE)
+print("Sliding Window Step Size:", STEP_SIZE)
 print("False-Discovery Rate:", FDR)
+print("Read Count Filter:", CF)
 print("Using", NUM_THREADS, "cores for processing")
 ###
 
@@ -138,7 +156,7 @@ pd.options.mode.chained_assignment = None
 #   Functions
 
 # # Function: generate sliding windows for downstream analysis 
-def make_windows(peaks_file, bins_file, bin_size=50, step_size=10):
+def make_windows(peaks_file, bins_file, bin_size, step_size):
 
     ## Prepare table
     #read in narrow peaks file to analyze for activity
@@ -155,8 +173,8 @@ def make_windows(peaks_file, bins_file, bin_size=50, step_size=10):
     bins_df = pd.read_table(bins.fn, names=['Chr', 'Start', 'End'])
     #Calculate bin size.
     bins_df['size'] = bins_df.End-bins_df.Start
-    #keep bins that are 50bp.
-    bins_filtered = bins_df[bins_df['size'] == 50]
+    #keep bins that are the bin size.
+    bins_filtered = bins_df[bins_df['size'] == bin_size]
     
     ## Format to SAF
     #adjust start to 1-based coordinate system. FeatureCounts uses 1-bases coordinates. 
@@ -208,10 +226,10 @@ def make_cts_table(bins_file, DNA_bams, RNA_bams, cts_file, replicates, threads)
     subprocess.call(cmd, shell = True)
 
 # # Function: call active and silent bins using DESeq2. Here I call an R script that I wrote. 
-def call_regulatory_bins(cts_file, out_dir, replicates, FDR, threads):
+def call_regulatory_bins(cts_file, out_dir, replicates, FDR, threads, cf):
     
     #assign Rscript as cmd. R script must be in the same directory as this python script
-    cmd = f"Rscript RNA-to-DNA_differential-analysis.r --counts {cts_file} --num_reps {replicates} --cores {threads} --FDR {FDR} --out_dir {out_dir}"
+    cmd = f"Rscript RNA-to-DNA_differential-analysis.r --counts {cts_file} --num_reps {replicates} --cores {threads} --count_filter {cf} --FDR {FDR} --out_dir {out_dir}"
     #run the command
     subprocess.call(cmd, shell = True)
 
@@ -248,14 +266,14 @@ def merge_bins(out_dir):
     silent_regions_df.to_csv(os.path.join(out_dir, "silent_regions.bed"), sep='\t', header=False, index = False)
 
 # # Wrapper Function:  
-def call_AS_regions_wrapper(peaks, out_dir, DNA, RNA, reps, num_threads, FDR):
+def call_AS_regions_wrapper(peaks, out_dir, DNA, RNA, reps, num_threads, FDR, bin_size, step_size, cf):
     #define path variables:
     bins = os.path.join(out_dir, "bins.saf")
     cts = os.path.join(out_dir, "cts.tsv")
 
     #make windows: part 1
     print("***Step 1: Generating sliding windows from the provided ChrAcc peaks file")
-    make_windows(peaks_file = peaks, bins_file = bins, bin_size=50, step_size=10)
+    make_windows(peaks_file = peaks, bins_file = bins, bin_size=bin_size, step_size=step_size)
     
     #make cts table: part 2
     print("")
@@ -265,7 +283,7 @@ def call_AS_regions_wrapper(peaks, out_dir, DNA, RNA, reps, num_threads, FDR):
     #call an associated R script to perform differential analysis on counted bins. Part 3. 
     print("")
     print("***Step 3: Performing differential analysis on counted bins")
-    call_regulatory_bins(cts_file = cts, out_dir = out_dir, replicates = reps, FDR=FDR, threads = num_threads)
+    call_regulatory_bins(cts_file = cts, out_dir = out_dir, replicates = reps, FDR=FDR, threads = num_threads, cf = cf)
     
     #Merge active and silent bins: part 4
     print("")
@@ -277,4 +295,5 @@ def call_AS_regions_wrapper(peaks, out_dir, DNA, RNA, reps, num_threads, FDR):
 #Execute wrapper function
 call_AS_regions_wrapper(peaks = ACC_PEAKS, out_dir = OUT_DIR, 
                         DNA = DNA_FILES, RNA = RNA_FILES, reps = REPS, 
-                        num_threads = NUM_THREADS, FDR=FDR)
+                        num_threads = NUM_THREADS, FDR=FDR, bin_size = BIN_SIZE, 
+                        step_size = STEP_SIZE, cf = CF)
