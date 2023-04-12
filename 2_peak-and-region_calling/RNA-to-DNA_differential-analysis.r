@@ -18,6 +18,8 @@ option_list = list(
               help="number of cores to use"),
     make_option(c("-q", "--FDR"), type="numeric", default=NULL, 
               help="false-discovery rate"),
+    make_option(c("-cf", "--count_filter"), type="integer", default=0, 
+              help="number of counts to filter against"),
     make_option(c("-o", "--out_dir"), type="character", default=NULL, 
               help="out directory")
 ); 
@@ -30,6 +32,7 @@ input_file <- opt$counts
 rep_num <- opt$num_reps
 cores <- opt$cores
 FDR <- opt$FDR
+cf <- opt$count_filter
 out_dir <- opt$out_dir
 
 #set up parallelization. 
@@ -63,9 +66,10 @@ if (rep_num == 5) {
 #Read in counts matrix. Skip the first two rows, which is metadata. 
 cts_df <- read_tsv(input_file, col_names = cts_col_names, skip = 2) 
 
-#Convert to a matrix by selecting read count columns and assigning bin ID as rownames. In addition, remove bins with any zero count.
+#Convert to a matrix by selecting read count columns and assigning bin ID as rownames. In addition, remove bins with any zero count. Also apply count fiter, if specified. 
 cts_matrix <- dplyr::select(cts_df, -Chr, -Start, -End, -Strand, -Length) %>% 
     column_to_rownames(var = "Bin_ID") %>% filter_if(is.numeric, all_vars((.) != 0)) %>%
+    filter_if(is.numeric, all_vars((.) >= cf)) %>% 
     as.matrix()
 
 #Prepare dataframe of sample info using the vectors defined in the if statements above. 
