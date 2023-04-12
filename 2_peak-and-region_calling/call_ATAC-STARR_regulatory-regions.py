@@ -26,7 +26,7 @@ Parameters:
 -bs (--bin_size): bin size of windows made
 -ss (--step_size): step size of sliding windows
 -q (--fdr): False Discovery Rate threshold to apply
--cf (--count_filter): number of raw read counts per bin to filter against
+-cf (--count_filter): number of raw read counts per bin to filter against (keeps bins >= count)
 -h (--help): display this help
 
 Required Software downloaded via conda:
@@ -83,8 +83,8 @@ arg_parser.add_argument("-ss", "--step_size", type=int, default=10,
 arg_parser.add_argument("-q", "--fdr", type=float, default=0.05,
                         help='false discovery rate for differential analysis (default: 0.05)')
 
-arg_parser.add_argument("-cf", "--count_filter", type=int, default=0,
-                        help='number of raw read counts per bin to filter against (default: 0)')
+arg_parser.add_argument("-cf", "--count_filter", type=int, default=1,
+                        help='number of raw read counts per bin to filter against (default: 1) (keeps bins >= count)')
 
 arg_parser.add_argument("-n", "--threads", type=int, default=1,
                         help='number of threads (default: 1)')
