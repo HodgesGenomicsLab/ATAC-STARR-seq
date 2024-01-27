@@ -29,11 +29,8 @@ Command-line:       R-based:
   Subread       
 ```
 ### Conda 
-We use conda to install our packages. We provide a text file of the software packages and their version number used in our conda environment as well as a yml file to clone our environment.
-```
-pkgs.txt
-conda_env.yml
-```
+We use conda to install our packages. 
+
 ## Read Processing and Quality Control (1_read-processing)
 We provide a jupyter notebook describing this portion of the analysis. In summary, raw reads are trimmed, assessed for quality, mapped to hg38, and filtered to remove regions mapping to ChrM and ENCODE blacklist regions. Reads with MAPQ scores less than 30 are also removed. For the accessibility analysis, we also generated deduplicated mapped read files. We also estimate library complexity using the preseq package and determine the distribution of insert size using Picard: (Supplementary Figure 1A, Supplementary Figure 2B,C). 
 ```
