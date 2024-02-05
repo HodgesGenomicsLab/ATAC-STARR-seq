@@ -137,3 +137,5 @@ Additional_Supplementary_Analysis.ipynb
 Neutral Sequence Analysis.ipynb
 Short-vs-long_elements.ipynb
 ```
+
+*On 2/5/2024, I added the generate_ATAC-STARR_bigwig.py script. This is a script also in my https://github.com/HodgesGenomicsLab/ATAC-STARR_cis_trans repository, but I felt it was a good idea to have it here. This script can be used to generate signal files from ATAC-STARR data. Need help, just ask!
